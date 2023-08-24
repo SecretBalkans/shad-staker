@@ -224,7 +224,7 @@ export interface Http {
  * Discovery Document as `{var}`.
  *
  * If a variable contains one or more path segments, such as `"{var=foo/*}"`
- * or `"{var=**}"`, when such a variable is expanded into a URL path, all
+ * or `"{var}"`, when such a variable is expanded into a URL path, all
  * characters except `[-_.~/0-9a-zA-Z]` are percent-encoded. Such variables
  * show up in the Discovery Document as `{+var}`.
  *
