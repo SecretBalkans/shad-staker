@@ -5,6 +5,7 @@ import type { Ref } from 'vue'
 
 export default function useCosmosBankV1Beta1() {
   const client = useClient();
+  console.log("Regular client: ", client)
   const QueryBalance = (address: string, query: any, options: any) => {
     const key = { type: 'QueryBalance',  address, query };    
     return useQuery([key], () => {

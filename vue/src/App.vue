@@ -11,6 +11,10 @@ const items = [
     label: "Data",
     to: "/data",
   },
+  {
+    label: "Secret",
+    to: "/secret",
+  },
 ];
 </script>
 

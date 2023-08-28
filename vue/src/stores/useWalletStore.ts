@@ -73,6 +73,7 @@ export const useWalletStore = defineStore("wallet", {
           pathIncrement: null,
           accounts: [],
         };
+        console.log("Before useKeplr call: ", client)
         await client.useKeplr();
         const [account] = await client.signer.getAccounts();
         wallet.accounts.push({ address: account.address, pathIncrement: null });

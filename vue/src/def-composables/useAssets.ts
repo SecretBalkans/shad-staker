@@ -1,7 +1,10 @@
 import { computed, onBeforeUpdate } from "vue";
 import useCosmosBankV1Beta1 from "@/composables/useCosmosBankV1Beta1";
-import { useAddress } from "./useAddress";
+import { useAddress, useAddressGeneric } from "./useAddress";
 import { useDenom } from "./useDenom";
+import useQuerySecretBalances from "@/composables/custom/useQuerySecretBalances";
+import { useClientGeneric } from "@/composables/useClient";
+import { envOsmosis, envSecret } from "@/env";
 
 export const useAssets = (perPage: number) => {
   // composables
@@ -21,6 +24,7 @@ export const useAssets = (perPage: number) => {
       }
     }, [] as HelperBalances);
   });
+  console.log("Balances raw: ", balancesRaw.value)
   const balances = computed(() => {
     return {
       assets: balancesRaw.value ?? [],
@@ -38,6 +42,35 @@ export const useAssets = (perPage: number) => {
       });
     }
   });
+
+  const clientOsmosis = useClientGeneric(envOsmosis)
+  const { address: addressOsmosis } = useAddressGeneric(clientOsmosis)
+  const { QueryAllBalances: Query2 } = useQuerySecretBalances()
+  const query2 = Query2(clientOsmosis, addressOsmosis.value, {}, { enabled }, perPage);
+  const balancesOsmoRaw = computed(() => {
+    return query2.data?.value?.pages.reduce((bals, page) => {
+      if (page.balances) {
+        return bals.concat(page.balances);
+      } else {
+        return bals;
+      }
+    }, [] as HelperBalances);
+  });
+  console.log("Balances Osmosis raw: ", balancesOsmoRaw.value)
+  
+  const clientSecret = useClientGeneric(envSecret)
+  const { address: addressSecret } = useAddressGeneric(clientSecret)
+  const query3 = Query2(clientSecret, addressSecret.value, {}, { enabled }, perPage);
+  const balancesSecretRaw = computed(() => {
+    return query3.data?.value?.pages.reduce((bals, page) => {
+      if (page.balances) {
+        return bals.concat(page.balances);
+      } else {
+        return bals;
+      }
+    }, [] as HelperBalances);
+  });
+  console.log("Balances Secret raw: ", balancesSecretRaw.value)
 
   return {
     balancesRaw,
