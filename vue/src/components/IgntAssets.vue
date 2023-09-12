@@ -130,8 +130,8 @@ import { IgntSearchIcon } from "@ignt/vue-library";
 import { IgntClearIcon } from "@ignt/vue-library";
 import { IgntArrowIcon } from "@ignt/vue-library";
 import { useWalletStore } from "@/stores/useWalletStore";
-import { storeToRefs } from "pinia";
-const { selectedAddress } = storeToRefs(useWalletStore());
+const walletStore = useWalletStore();
+const selectedAddress = walletStore.selectedAddress;
 const props = defineProps({
   displayLimit: {
     type: Number,

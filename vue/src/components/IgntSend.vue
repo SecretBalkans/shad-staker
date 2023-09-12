@@ -112,7 +112,7 @@
         v-if="isTxSuccess"
         class="flex items-center justify-center text-xs text-green-500 italic mt-2"
       >
-        Tx submitted succesfully
+        Tx submitted successfully
       </div>
     </div>
   </div>
@@ -174,9 +174,9 @@ const state = reactive(initialState);
 const walletStore = useWalletStore();
 const activeClient = walletStore.activeClient;
 const address = walletStore.selectedAddress;
-const sendMsgSend = activeClient.CosmosBankV1Beta1.tx.sendMsgSend;
+const sendMsgSend = activeClient?.CosmosBankV1Beta1?.tx.sendMsgSend;
 const sendMsgTransfer =
-  activeClient.IbcApplicationsTransferV1.tx.sendMsgTransfer;
+  activeClient?.IbcApplicationsTransferV1.tx.sendMsgTransfer;
 const { balances } = useAssets(100);
 
 const resetTx = (): void => {
@@ -323,7 +323,7 @@ let ableToTx = computed<boolean>(
     validTxAmount.value &&
     validReceiver.value &&
     validTxFees.value &&
-    !!address.value
+    !!address
 );
 const bootstrapTxAmount = () => {
   if (hasAnyBalance.value) {

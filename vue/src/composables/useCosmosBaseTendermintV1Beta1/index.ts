@@ -17,11 +17,10 @@ export default function useCosmosBaseTendermintV1Beta1() {
     return useQuery(
       [key],
       () => {
-        return client.CosmosBaseTendermintV1Beta1.query
-          .serviceGetNodeInfo()
+        return client?.serviceGetNodeInfo()
           .then((res) => res.data);
       },
-      options
+      {...options, enabled: !!walletStore.selectedAddress}
     );
   };
 
@@ -30,11 +29,11 @@ export default function useCosmosBaseTendermintV1Beta1() {
     return useQuery(
       [key],
       () => {
-        return client.CosmosBaseTendermintV1Beta1.query
-          .serviceGetSyncing()
+        return client?.serviceGetSyncing()
           .then((res) => res.data);
       },
-      options
+      {...options, enabled: !!walletStore.selectedAddress}
+
     );
   };
 
@@ -47,7 +46,8 @@ export default function useCosmosBaseTendermintV1Beta1() {
           .serviceGetLatestBlock()
           .then((res) => res.data);
       },
-      options
+      {...options, enabled: !!walletStore.selectedAddress}
+
     );
   };
 
@@ -61,7 +61,8 @@ export default function useCosmosBaseTendermintV1Beta1() {
           .serviceGetBlockByHeight(height)
           .then((res) => res.data);
       },
-      options
+      {...options, enabled: !!walletStore.selectedAddress}
+
     );
   };
 
@@ -85,6 +86,7 @@ export default function useCosmosBaseTendermintV1Beta1() {
       },
       {
         ...options,
+        enabled: !!walletStore.selectedAddress,
         getNextPageParam: (lastPage, allPages) => {
           if (
             (lastPage.pagination?.total ?? 0) >

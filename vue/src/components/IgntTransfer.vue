@@ -13,23 +13,23 @@
     :activeLinkClasses="['text-black']"
   >
     <div class="" tabTitle="Send">
-      <IgntSend v-if="selectedAddress" />
+      <IgntSend v-if="isEnabled" />
     </div>
     <div class="" tabTitle="Receive">
-      <IgntCard v-if="selectedAddress">
+      <IgntCard v-if="isEnabled">
         <template #header>
           <div
             class="flex bg-gray-100 align-center items-center justify-center w-full py-10"
           >
-            <IgntQRCode :value="selectedAddress" color="#000" :width="112" />
+            <IgntQRCode :value="walletProvider.selectedAddress" color="#000" :width="112" />
           </div>
         </template>
         <template #default>
           <div class="p-5 break-all">
-            {{ selectedAddress }}
+            {{ walletProvider.selectedAddress }}
           </div>
           <div class="p-5 pt-0 text-right">
-            <IgntClipboard :text="selectedAddress" />
+            <IgntClipboard :text="walletProvider.selectedAddress" />
           </div>
         </template>
       </IgntCard>
@@ -43,6 +43,8 @@ import { IgntCard } from "@ignt/vue-library";
 import { IgntClipboard } from "@ignt/vue-library";
 import IgntSend from "./IgntSend.vue";
 import { useWalletStore } from "@/stores/useWalletStore";
+import {computed} from "vue";
 
-const { selectedAddress } = useWalletStore();
+const walletProvider = useWalletStore();
+const isEnabled = computed(() => !!walletProvider.selectedAddress);
 </script>

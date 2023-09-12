@@ -5,12 +5,12 @@ import { useWalletStore } from "@/stores/useWalletStore";
 export const useAsset = (denom: string) => {
   const walletStore = useWalletStore();
   const { QueryBalance } = useCosmosBankV1Beta1();
-  const query = computed((e) => {
-    console.log(e);
-    return QueryBalance(walletStore.selectedAddress, { denom }, {});
+  const enabled = computed(() => walletStore.selectedAddress != "");
+  const query = QueryBalance(walletStore.selectedAddress, { denom }, {
+    enabled
   });
   const balance = computed(() => {
-    return query.value.data?.value?.balance;
+    return query.data?.value?.balance;
   });
-  return { balance, isLoading: query.value.isLoading };
+  return { balance, isLoading: query.isLoading };
 };
