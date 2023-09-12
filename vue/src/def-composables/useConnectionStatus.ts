@@ -1,5 +1,5 @@
 import useCosmosBaseTendermintV1Beta1 from "@/composables/useCosmosBaseTendermintV1Beta1";
-import { env } from "@/env";
+import { envSecret } from "@/env";
 import { computed, ref } from "vue";
 
 export const useConnectionStatus = () => {
@@ -9,7 +9,7 @@ export const useConnectionStatus = () => {
   const rpcConnected = ref(false);
   const rpcCheck = async () => {
     try {
-      await fetch(env.rpcURL);
+      await fetch(envSecret.rpcURL);
       rpcConnected.value = true;
     } catch (e) {
       console.error(e);

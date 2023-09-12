@@ -1,15 +1,16 @@
 import { computed } from "vue";
 import useCosmosTxV1Beta1 from "@/composables/useCosmosTxV1Beta1";
-import { useAddress } from "./useAddress";
+import { useWalletStore } from "@/stores/useWalletStore";
+import { storeToRefs } from "pinia";
 
 export const useTransactions = () => {
-  const { address } = useAddress();
+  const { selectedAddress } = storeToRefs(useWalletStore());
   const { ServiceGetTxsEvent } = useCosmosTxV1Beta1();
   const SENT_EVENT = computed<string>(
-    () => `transfer.sender='${address.value}'`
+    () => `transfer.sender='${selectedAddress.value}'`
   );
   const RECEIVED_EVENT = computed<string>(
-    () => `transfer.recipient='${address.value}'`
+    () => `transfer.recipient='${selectedAddress.value}'`
   );
   const sentQuery = ServiceGetTxsEvent({ events: SENT_EVENT.value }, {}, 100);
   const receivedQuery = ServiceGetTxsEvent(

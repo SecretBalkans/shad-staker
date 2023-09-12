@@ -32,7 +32,7 @@ export class IgniteClient extends EventEmitter {
 
     if (Array.isArray(plugin)) {
       type Extension = UnionToIntersection<Return<T>['module']>
-      return AugmentedClient as typeof IgniteClient & Constructor<Extension>;  
+      return AugmentedClient as typeof IgniteClient & Constructor<Extension>;
     }
 
     type Extension = Return<T>['module']
@@ -51,7 +51,7 @@ export class IgniteClient extends EventEmitter {
 
   constructor(env: Env, signer?: OfflineSigner) {
     super();
-    this.env = env;
+    this.env = env
     this.setMaxListeners(0);
     this.signer = signer;
     const classConstructor = this.constructor as typeof IgniteClient;
@@ -61,13 +61,13 @@ export class IgniteClient extends EventEmitter {
       if (this.registry) {
         this.registry = this.registry.concat(pluginInstance.registry)
       }
-		});		
+		});
   }
-  useSigner(signer: OfflineSigner) {    
+  useSigner(signer: OfflineSigner) {
       this.signer = signer;
       this.emit("signer-changed", this.signer);
   }
-  removeSigner() {    
+  removeSigner() {
       this.signer = undefined;
       this.emit("signer-changed", this.signer);
   }
@@ -79,11 +79,11 @@ export class IgniteClient extends EventEmitter {
       ).queryClient;
       const bankQueryClient = (await import("./cosmos.bank.v1beta1/module"))
         .queryClient;
-      
+
       const stakingQueryClient = (await import("./cosmos.staking.v1beta1/module")).queryClient;
       const stakingqc = stakingQueryClient({ addr: this.env.apiURL });
       const staking = await (await stakingqc.queryParams()).data;
-      
+
       const qc = queryClient({ addr: this.env.apiURL });
       const node_info = await (await qc.serviceGetNodeInfo()).data;
       const chainId = node_info.default_node_info?.network ?? "";
@@ -117,13 +117,13 @@ export class IgniteClient extends EventEmitter {
           return y;
         }) ?? [];
 
-      
+
       let stakeCurrency = {
               coinDenom: staking.params?.bond_denom?.toUpperCase() ?? "",
               coinMinimalDenom: staking.params?.bond_denom ?? "",
               coinDecimals: 0,
             };
-      
+
       let feeCurrencies =
         tokens.supply?.map((x) => {
           const y = {

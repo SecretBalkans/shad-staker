@@ -80,7 +80,7 @@
         </tr>
       </tbody>
     </table>
-    <template v-if="address && balances.isLoading">
+    <template v-if="selectedAddress && balances.isLoading">
       <div role="status" class="w-100 animate-pulse flex flex-col">
         <div
           class="flex flex-row justify-between py-7 items-center flex-1"
@@ -101,7 +101,9 @@
       </div>
     </template>
     <div
-      v-if="!address || (!balances.isLoading && !balances.assets.length)"
+      v-if="
+        !selectedAddress || (!balances.isLoading && !balances.assets.length)
+      "
       class="text-left text-black opacity-75 text-md font-normal py-8"
     >
       You have no assets
@@ -121,14 +123,15 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, toRefs } from "vue";
 
-import { useAddress } from "../def-composables/useAddress";
 import { useAssets } from "../def-composables/useAssets";
 import { useDenom } from "../def-composables/useDenom";
 import IgntDenom from "./IgntDenom.vue";
 import { IgntSearchIcon } from "@ignt/vue-library";
 import { IgntClearIcon } from "@ignt/vue-library";
 import { IgntArrowIcon } from "@ignt/vue-library";
-
+import { useWalletStore } from "@/stores/useWalletStore";
+import { storeToRefs } from "pinia";
+const { selectedAddress } = storeToRefs(useWalletStore());
 const props = defineProps({
   displayLimit: {
     type: Number,
@@ -146,7 +149,6 @@ const state = ref({
 });
 
 // composables
-let { address } = useAddress();
 let { balances, fetch, hasMore } = useAssets(props.displayLimit);
 
 const filteredBalanceList = computed(() => {

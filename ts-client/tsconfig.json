@@ -6,6 +6,7 @@
       "outDir": "./lib",
       "allowSyntheticDefaultImports": true,
       "esModuleInterop": false,
+      "noImplicitAny": false,
       "strict": false,
       "skipLibCheck": true
     }

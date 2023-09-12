@@ -1,9 +1,7 @@
-import { useClient } from "@/composables/useClient";
 import { useWalletStore } from "@/stores/useWalletStore";
 import { computed } from "vue";
 
 export default function () {
-  const client = useClient();
   const walletStore = useWalletStore();
 
   const connectToKeplr = async (
@@ -11,8 +9,12 @@ export default function () {
     onErrorCb: () => void
   ) => {
     try {
-      walletStore.connectWithKeplr();
-      onSuccessCb();
+      walletStore
+        .connectWithKeplr()
+        .then(() => {
+          onSuccessCb();
+        })
+        .catch(onErrorCb);
     } catch (e) {
       console.error(e);
       onErrorCb();
@@ -30,7 +32,9 @@ export default function () {
     await window.keplr.getKey(chainId);
 
   const listenToAccChange = (cb: EventListener) => {
-    client.on("signer-changed", cb);
+    window.addEventListener("keplr_keystorechange", (evt) => {
+      cb(evt);
+    });
   };
 
   return {

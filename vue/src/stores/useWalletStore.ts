@@ -2,6 +2,7 @@ import CryptoJS from "crypto-js";
 import { defineStore } from "pinia";
 import { useClient } from "@/composables/useClient";
 import type { Wallet, Nullable, EncodedWallet } from "@/utils/interfaces";
+import { envOsmosis, envSecret } from "@/env";
 
 export const useWalletStore = defineStore("wallet", {
   state: () => ({
@@ -14,20 +15,25 @@ export const useWalletStore = defineStore("wallet", {
     selectedAddress: "",
     authorized: false,
     backupState: true,
-    gasPrice: "0.0000025token",
+    gasPrice: "0.025uscrt",
   }),
   getters: {
     getClient: (state) => state.activeClient,
     getGasPrice: (state) => state.gasPrice,
     getWallet: (state) => state.activeWallet,
     getAddress: (state) => state.selectedAddress,
+    getShortAddress: (state) =>
+      `${state.selectedAddress.substring(
+        0,
+        10
+      )}...${state.selectedAddress.slice(-4)}`,
     getPath: (state) => {
       if (state.activeWallet && state.activeWallet.HDpath) {
         return (
           state.activeWallet.HDpath +
           state.activeWallet.accounts.find(
             (x) => x.address == state.selectedAddress
-          ).pathIncrement
+          )?.pathIncrement
         );
       } else {
         return null;
@@ -61,25 +67,41 @@ export const useWalletStore = defineStore("wallet", {
       this.authorized = false;
     },
     async connectWithKeplr() {
-      const client = useClient();
-
+      const client = useClient(envSecret);
+      const oClient = useClient(envOsmosis);
       try {
         const wallet: Wallet = {
           name: "Keplr Integration",
           mnemonic: null,
           HDpath: null,
           password: null,
-          prefix: client.env.prefix ?? "cosmos",
+          prefix: client.env.prefix,
           pathIncrement: null,
           accounts: [],
         };
-        console.log("Before useKeplr call: ", client)
+        console.log("Before useKeplr call: ", client);
         await client.useKeplr();
-        const [account] = await client.signer.getAccounts();
-        wallet.accounts.push({ address: account.address, pathIncrement: null });
+
+        const setAddress = async () => {
+          if (client.signer) {
+            const [{ address: rawAddress }] = await client.signer.getAccounts();
+            wallet.accounts.push({ address: rawAddress, pathIncrement: null });
+            this.selectedAddress = rawAddress;
+          } else {
+            this.selectedAddress = "";
+          }
+        };
+        client.on("signer-changed", () => {
+          setAddress();
+        });
+        window.addEventListener("keplr_keystorechange", () => {
+          setAddress();
+        });
+
+        await setAddress();
 
         this.activeWallet = wallet;
-        window.localStorage.setItem("lastWallet", wallet.name);
+
         if (
           this.activeWallet &&
           this.activeWallet.name &&
@@ -109,6 +131,7 @@ export const useWalletStore = defineStore("wallet", {
       }
       this.storeWallets();
     },
+
     storeWallets() {
       window.localStorage.setItem("wallets", JSON.stringify(this.wallets));
       this.backupState = false;

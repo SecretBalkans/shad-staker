@@ -8,7 +8,7 @@
         >Connected wallet</span
       >
       <div class="mb-3 flex items-center">
-        <IgntProfileIcon :address="address" />
+        <IgntProfileIcon :address="selectedAddress" />
         <div class="flex flex-col ml-3">
           <span class="text-[13px] font-bold">
             {{ accName }}
@@ -16,7 +16,7 @@
           <span
             class="text-[13px] leading-normal text-gray-660 copy-address flex items-center"
             title="Copy address"
-            @click="copy(address)"
+            @click="copy(selectedAddress)"
           >
             {{ shortAddress }}
             <IgntCopyIcon class="ml-2 cursor-pointer hover:text-black" />
@@ -132,12 +132,12 @@
 import useCosmosBaseTendermintV1Beta1 from "@/composables/useCosmosBaseTendermintV1Beta1";
 import { useConnectionStatus } from "@/def-composables/useConnectionStatus";
 import { computed, onBeforeUnmount, onMounted, reactive } from "vue";
-import { useAddress } from "../def-composables/useAddress";
-import { useClipboard } from "../def-composables/useClipboard";
+import { useClipboard } from "@/def-composables/useClipboard";
 import { IgntChevronRightIcon } from "@ignt/vue-library";
 import { IgntExternalArrowIcon } from "@ignt/vue-library";
 import { IgntProfileIcon } from "@ignt/vue-library";
 import { IgntCopyIcon } from "@ignt/vue-library";
+import { useWalletStore } from "@/stores/useWalletStore";
 
 enum UI_STATE {
   "DEFAULT" = 1,
@@ -167,9 +167,10 @@ defineProps({
 const emit = defineEmits(["disconnect", "close"]);
 
 // composables
-let { address, shortAddress } = useAddress();
+const walletStore = useWalletStore();
+const selectedAddress = walletStore.selectedAddress;
+const shortAddress = walletStore.getShortAddress;
 let { copy } = useClipboard();
-
 // computed
 const query = useCosmosBaseTendermintV1Beta1();
 const nodeInfo = query.ServiceGetNodeInfo({});

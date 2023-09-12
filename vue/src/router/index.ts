@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 
 import DataView from "../views/DataView.vue";
 import PortfolioView from "../views/PortfolioView.vue";
-import SecretView from "../views/SecretView.vue"
+import SecretView from "../views/SecretView.vue";
 
 const routerHistory = createWebHistory();
 const routes = [

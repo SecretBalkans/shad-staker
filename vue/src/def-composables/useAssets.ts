@@ -1,19 +1,29 @@
 import { computed, onBeforeUpdate } from "vue";
 import useCosmosBankV1Beta1 from "@/composables/useCosmosBankV1Beta1";
-import { useAddress, useAddressGeneric } from "./useAddress";
 import { useDenom } from "./useDenom";
-import useQuerySecretBalances from "@/composables/custom/useQuerySecretBalances";
-import { useClientGeneric } from "@/composables/useClient";
-import { envOsmosis, envSecret } from "@/env";
+import { useWalletStore } from "@/stores/useWalletStore";
+import type {Amount} from "@/utils/interfaces";
 
 export const useAssets = (perPage: number) => {
   // composables
-  const { address } = useAddress();
+  const walletStore = useWalletStore();
   const { QueryAllBalances } = useCosmosBankV1Beta1();
-  const enabled = address.value != ""; // if useAssets is called with no wallet connected/no address actual query will be registered but never ran
-  const query = QueryAllBalances(address.value, {}, { enabled }, perPage);
+  const enabled = computed(() => walletStore.selectedAddress != ""); // if useAssets is called with no wallet connected/no address actual query will be registered but never ran
+  const query = QueryAllBalances(
+    walletStore.selectedAddress,
+    {},
+    {
+      enabled: enabled.value,
+      staleTime: 12000,
+      refetchInterval: 12000,
+      refetchIntervalInBackground: true,
+    },
+    perPage
+  );
   type HelperBalances = NonNullable<
-    NonNullable<Required<typeof query.data>["value"]>["pages"][0]["balances"]
+    NonNullable<
+      Required<typeof query.value.data>["value"]
+    >["pages"][0]["balances"]
   >;
   const balancesRaw = computed(() => {
     return query.data?.value?.pages.reduce((bals, page) => {
@@ -24,10 +34,9 @@ export const useAssets = (perPage: number) => {
       }
     }, [] as HelperBalances);
   });
-  console.log("Balances raw: ", balancesRaw.value)
   const balances = computed(() => {
     return {
-      assets: balancesRaw.value ?? [],
+      assets: balancesRaw.value as Amount[] ?? [],
       isLoading: query.isLoading.value,
     };
   });
@@ -35,18 +44,29 @@ export const useAssets = (perPage: number) => {
     return query.isLoading.value;
   });
 
+  console.log(
+    "Balances Secret(default) raw: ",
+    balances?.value?.assets,
+    enabled
+  );
   onBeforeUpdate(() => {
     if (balancesRaw.value && balancesRaw.value.length > 0) {
-      balancesRaw.value.forEach((x) => {
+      balancesRaw.value.forEach((x: any) => {
         if (x.denom) useDenom(x.denom);
       });
     }
   });
 
-  const clientOsmosis = useClientGeneric(envOsmosis)
-  const { address: addressOsmosis } = useAddressGeneric(clientOsmosis)
-  const { QueryAllBalances: Query2 } = useQuerySecretBalances()
-  const query2 = Query2(clientOsmosis, addressOsmosis.value, {}, { enabled }, perPage);
+  /*const clientOsmosis = useClientGeneric(envOsmosis);
+  const { address: addressOsmosis } = useAddressGeneric(clientOsmosis);
+  const { QueryAllBalances: Query2 } = useQueryBalances();
+  const query2 = Query2(
+    clientOsmosis,
+    addressOsmosis.value,
+    {},
+    { enabled: !!addressOsmosis.value },
+    perPage
+  );
   const balancesOsmoRaw = computed(() => {
     return query2.data?.value?.pages.reduce((bals, page) => {
       if (page.balances) {
@@ -56,21 +76,11 @@ export const useAssets = (perPage: number) => {
       }
     }, [] as HelperBalances);
   });
-  console.log("Balances Osmosis raw: ", balancesOsmoRaw.value)
-  
-  const clientSecret = useClientGeneric(envSecret)
-  const { address: addressSecret } = useAddressGeneric(clientSecret)
-  const query3 = Query2(clientSecret, addressSecret.value, {}, { enabled }, perPage);
-  const balancesSecretRaw = computed(() => {
-    return query3.data?.value?.pages.reduce((bals, page) => {
-      if (page.balances) {
-        return bals.concat(page.balances);
-      } else {
-        return bals;
-      }
-    }, [] as HelperBalances);
-  });
-  console.log("Balances Secret raw: ", balancesSecretRaw.value)
+  console.log(
+    "Balances Osmosis raw: ",
+    balancesOsmoRaw.value,
+    !!addressOsmosis.value
+  );*/
 
   return {
     balancesRaw,
