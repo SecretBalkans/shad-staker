@@ -21,15 +21,15 @@
           <div
             class="flex bg-gray-100 align-center items-center justify-center w-full py-10"
           >
-            <IgntQRCode :value="walletProvider.selectedAddress" color="#000" :width="112" />
+            <IgntQRCode :value="walletProvider.secretAddress" color="#000" :width="112" />
           </div>
         </template>
         <template #default>
           <div class="p-5 break-all">
-            {{ walletProvider.selectedAddress }}
+            {{ walletProvider.secretAddress }}
           </div>
           <div class="p-5 pt-0 text-right">
-            <IgntClipboard :text="walletProvider.selectedAddress" />
+            <IgntClipboard :text="walletProvider.secretAddress" />
           </div>
         </template>
       </IgntCard>
@@ -46,5 +46,5 @@ import { useWalletStore } from "@/stores/useWalletStore";
 import {computed} from "vue";
 
 const walletProvider = useWalletStore();
-const isEnabled = computed(() => !!walletProvider.selectedAddress);
+const isEnabled = computed(() => !!walletProvider.secretAddress);
 </script>

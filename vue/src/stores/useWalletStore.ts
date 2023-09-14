@@ -1,131 +1,171 @@
-import CryptoJS from "crypto-js";
 import { defineStore } from "pinia";
 import { useClient } from "@/composables/useClient";
-import type { Wallet, Nullable, EncodedWallet } from "@/utils/interfaces";
 import { envOsmosis, envSecret } from "@/env";
+import { IgniteClient } from "example-client-ts/client";
 
 export const useWalletStore = defineStore("wallet", {
-  state: () => ({
-    wallets:
-      (JSON.parse(
-        window.localStorage.getItem("wallets") ?? "null"
-      ) as Array<EncodedWallet>) || ([] as Array<EncodedWallet>),
-    activeWallet: null as Nullable<Wallet>,
-    activeClient: null as Nullable<ReturnType<typeof useClient>>,
-    selectedAddress: "",
-    authorized: false,
-    backupState: true,
-    gasPrice: "0.025uscrt",
-  }),
+  state: () => {
+    const secretClient = useClient(envSecret);
+    const osmoClient = useClient(envOsmosis);
+    return {
+      /*wallets:
+              (JSON.parse(
+                window.localStorage.getItem("wallets") ?? "null"
+              ) as Array<EncodedWallet>) || ([] as Array<EncodedWallet>),
+            */
+      // activeWallet: null as Nullable<Wallet>,
+      // activeClient: null as Nullable<ReturnType<typeof useClient>>,
+      // selectedAddress: "",
+      authorized: false,
+      backupState: true,
+      // secretAddress: "" as string, // because of IDE issue included here to avoid TS errors
+      // shortSecretAddress: "" as string, // because of IDE issue included here to avoid TS errors
+      secretClient: secretClient,
+      osmoClient: osmoClient,
+      // gasPrice: "0.025uscrt",
+      // wallets: null as Nullable<Record<string, Wallet>>,
+      activeClients: {
+        [envSecret.chainId]: secretClient,
+        [envOsmosis.chainId]: osmoClient
+      } as Record<string, ReturnType<typeof useClient>>,
+      addresses: {
+        [envSecret.chainId]: "",
+        [envOsmosis.chainId]: ""
+      } as Record<string, string>
+    };
+  },
   getters: {
-    getClient: (state) => state.activeClient,
-    getGasPrice: (state) => state.gasPrice,
-    getWallet: (state) => state.activeWallet,
-    getAddress: (state) => state.selectedAddress,
-    getShortAddress: (state) =>
-      `${state.selectedAddress.substring(
+    secretAddress(state): string | undefined {
+      return state.addresses[envSecret.chainId];
+    },
+    shortSecretAddress(state) {
+      // @ts-ignore because of IDE issue included here to avoid TS errors
+      return `${state.secretAddress?.substring(
         0,
         10
-      )}...${state.selectedAddress.slice(-4)}`,
-    getPath: (state) => {
-      if (state.activeWallet && state.activeWallet.HDpath) {
-        return (
-          state.activeWallet.HDpath +
-          state.activeWallet.accounts.find(
-            (x) => x.address == state.selectedAddress
-          )?.pathIncrement
-        );
-      } else {
-        return null;
-      }
-    },
-    getNameAvailable: (state) => (name: string) => {
-      return state.wallets.findIndex((x) => x.name == name) == -1;
-    },
-    getLastWallet: (state) => {
-      if (state.activeWallet) {
-        return state.activeWallet.name;
-      } else {
-        return window.localStorage.getItem("lastWallet");
-      }
-    },
-    getLoggedIn: (state) => state.activeClient !== null,
-    getSigner: (state) => {
-      if (state.activeClient) {
-        return state.activeClient.signer;
-      } else {
-        return null;
-      }
-    },
+        // @ts-ignore because of IDE issue included here to avoid TS errors
+      )}...${state.secretAddress?.slice(-4)}`;
+    }
+    // getClient: (state) => state.activeClient,
+    // getGasPrice: (state) => state.gasPrice,
+    // getWallet: (state) => state.activeWallet,
+    /*getPath: (state) => {
+          if (state.activeWallet && state.activeWallet.HDpath) {
+            return (
+              state.activeWallet.HDpath +
+              state.activeWallet.accounts.find(
+                (x) => x.address == state.selectedAddress
+              )?.pathIncrement
+            );
+          } else {
+            return null;
+          }
+        },*/
+    /*getNameAvailable: (state) => (name: string) => {
+          return state.wallets.findIndex((x) => x.name == name) == -1;
+        },*/
+    /*getLastWallet: (state) => {
+          if (state.activeWallet) {
+            return state.activeWallet.name;
+          } else {
+            return window.localStorage.getItem("lastWallet");
+          }
+        },*/
+    // getLoggedIn: (state) => state.activeClient !== null,
+    /*getSigner: (state) => {
+          if (state.activeClient) {
+            return state.activeClient.signer;
+          } else {
+            return null;
+          }
+        },*/
   },
   actions: {
     signOut() {
-      this.selectedAddress = "";
-      this.activeClient?.removeSigner();
-      this.activeClient = null;
-      this.activeWallet = null;
+      // this.selectedAddress = "";
+      // this.activeClient?.removeSigner();
+      // this.activeClient = null;
+      // this.activeWallet = null;
       this.authorized = false;
+
+      Object.keys(this.activeClients).forEach((chainId) =>
+        this.activeClients[chainId].removeSigner()
+      );
+      Object.keys(this.addresses).forEach(
+        (chainId) => (this.addresses[chainId] = "")
+      );
     },
     async connectWithKeplr() {
-      const client = useClient(envSecret);
-      const oClient = useClient(envOsmosis);
       try {
-        const wallet: Wallet = {
-          name: "Keplr Integration",
-          mnemonic: null,
-          HDpath: null,
-          password: null,
-          prefix: client.env.prefix,
-          pathIncrement: null,
-          accounts: [],
+        // const wallet: Wallet = {
+        //   name: "Keplr Integration",
+        //   mnemonic: null,
+        //   HDpath: null,
+        //   password: null,
+        //   prefix: client.env.prefix,
+        //   pathIncrement: null,
+        //   accounts: [],
+        // };
+        await IgniteClient.enableKeplr(
+          [envSecret, envOsmosis].map(({ chainId }) => chainId)
+        );
+        const setAddresses = async () => {
+          await Promise.all(
+            Object.keys(this.activeClients).map((chainId) =>
+              (async () => {
+                const client = this.activeClients[chainId];
+                await client.useKeplr();
+                if (client.signer) {
+                  const [{ address: rawAddress }] =
+                    await client.signer.getAccounts();
+                  this.addresses[chainId] = rawAddress;
+                  console.log(`Connected ${chainId}`)
+                  // wallet.accounts.push({ address: rawAddress, pathIncrement: null });
+                  // this.selectedAddress = rawAddress;
+                } else {
+                  this.addresses[chainId] = "";
+                  // this.selectedAddress = "";
+                }
+              })()
+            )
+          );
         };
-        console.log("Before useKeplr call: ", client);
-        await client.useKeplr();
 
-        const setAddress = async () => {
-          if (client.signer) {
-            const [{ address: rawAddress }] = await client.signer.getAccounts();
-            wallet.accounts.push({ address: rawAddress, pathIncrement: null });
-            this.selectedAddress = rawAddress;
-          } else {
-            this.selectedAddress = "";
-          }
-        };
-        client.on("signer-changed", () => {
-          setAddress();
+        await setAddresses();
+
+        this.activeClients[envSecret.chainId].on("signer-changed", () => {
+          setAddresses();
         });
+
         window.addEventListener("keplr_keystorechange", () => {
-          setAddress();
+          setAddresses();
         });
 
-        await setAddress();
+        /* this.activeWallet = wallet;
+        
+                if (
+                  this.activeWallet &&
+                  this.activeWallet.name &&
+                  this.activeWallet.password
+                ) {
+                  this.wallets.push({
+                    name: this.activeWallet.name,
+                    wallet: CryptoJS.AES.encrypt(
+                      JSON.stringify(this.activeWallet),
+                      this.activeWallet.password
+                    ).toString(),
+                  });
+                }
+                if (
+                  this.activeWallet.name == "Keplr Integration" &&
+                  !this.activeWallet.password
+                ) {
+                  this.wallets.push({
+                    name: this.activeWallet.name,
+                    wallet: JSON.stringify(this.activeWallet),
+                  });
+                }*/
 
-        this.activeWallet = wallet;
-
-        if (
-          this.activeWallet &&
-          this.activeWallet.name &&
-          this.activeWallet.password
-        ) {
-          this.wallets.push({
-            name: this.activeWallet.name,
-            wallet: CryptoJS.AES.encrypt(
-              JSON.stringify(this.activeWallet),
-              this.activeWallet.password
-            ).toString(),
-          });
-        }
-        if (
-          this.activeWallet.name == "Keplr Integration" &&
-          !this.activeWallet.password
-        ) {
-          this.wallets.push({
-            name: this.activeWallet.name,
-            wallet: JSON.stringify(this.activeWallet),
-          });
-        }
-
-        this.activeClient = client;
       } catch (e) {
         console.error(e);
       }
@@ -133,8 +173,8 @@ export const useWalletStore = defineStore("wallet", {
     },
 
     storeWallets() {
-      window.localStorage.setItem("wallets", JSON.stringify(this.wallets));
+      // window.localStorage.setItem("wallets", JSON.stringify(this.wallets));
       this.backupState = false;
-    },
-  },
+    }
+  }
 });

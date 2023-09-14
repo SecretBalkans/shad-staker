@@ -7,14 +7,6 @@ const items = [
     label: "Portfolio",
     to: "/",
   },
-  {
-    label: "Data",
-    to: "/data",
-  },
-  {
-    label: "Secret",
-    to: "/secret",
-  },
 ];
 </script>
 

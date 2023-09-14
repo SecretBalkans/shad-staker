@@ -4,13 +4,14 @@ import { useWalletStore } from "@/stores/useWalletStore";
 import { storeToRefs } from "pinia";
 
 export const useTransactions = () => {
-  const { selectedAddress } = storeToRefs(useWalletStore());
+  //TODO: refactor using client when tx history is needed
+  const { secretAddress } = storeToRefs(useWalletStore());
   const { ServiceGetTxsEvent } = useCosmosTxV1Beta1();
   const SENT_EVENT = computed<string>(
-    () => `transfer.sender='${selectedAddress.value}'`
+    () => `transfer.sender='${secretAddress.value}'`
   );
   const RECEIVED_EVENT = computed<string>(
-    () => `transfer.recipient='${selectedAddress.value}'`
+    () => `transfer.recipient='${secretAddress.value}'`
   );
   const sentQuery = ServiceGetTxsEvent({ events: SENT_EVENT.value }, {}, 100);
   const receivedQuery = ServiceGetTxsEvent(
@@ -47,19 +48,19 @@ export const useTransactions = () => {
   });
   const txs = computed(() => {
     return allSent.value
-      .map((x) => ({ type: "sent", ...x }))
+      .map((x: any) => ({ type: "sent", ...x }))
       .concat(
-        allReceived.value.map((x) => ({
+        allReceived.value.map((x: any) => ({
           type: "received",
           ...x,
         })) ?? []
       )
-      .sort((a, b) => {
+      .sort((a: { height: any; }, b: { height: any; }) => {
         return (Number(a.height) ?? 0) < (Number(b.height) ?? 0) ? 1 : -1;
       });
   });
   const transferTxs = computed(() => {
-    return txs.value?.filter((x) =>
+    return txs.value?.filter((x: { tx: any; }) =>
       ((x.tx as any)?.body.messages as any[]).some(
         (x) =>
           x["@type"] == "/cosmos.bank.v1beta1.MsgSend" ||

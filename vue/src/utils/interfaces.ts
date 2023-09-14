@@ -3,20 +3,14 @@ export interface Account {
   pathIncrement: Nullable<number>;
 }
 export type Nullable<T> = T | null;
+export type BalanceAmount = {
+  amount: string;
+  denom: string;
 
-export type Wallet = {
-  name: string;
-  mnemonic: string | null;
-  HDpath: string | null;
-  password: string | null;
-  prefix: string;
-  pathIncrement: Nullable<number>;
-  accounts: Account[];
-};
-export type EncodedWallet = {
-  name: string;
-  wallet: string;
-};
+  chainId: string;
+
+  isSecret?: boolean;
+}
 export type Amount = {
   amount: string;
   denom: string;

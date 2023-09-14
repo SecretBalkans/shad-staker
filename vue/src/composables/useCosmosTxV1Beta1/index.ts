@@ -1,17 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import {
-  useQuery,
-  type UseQueryOptions,
-  useInfiniteQuery,
-  type UseInfiniteQueryOptions,
-} from "@tanstack/vue-query";
-import { useClient } from "../useClient";
-import type { Ref } from "vue";
-import { useWalletStore } from "@/stores/useWalletStore";
+import { useQuery, useInfiniteQuery } from "@tanstack/vue-query";
 
-export default function useCosmosTxV1Beta1() {
-  const walletStore = useWalletStore();
-  const client = walletStore.activeClient;
+export default function useCosmosTxV1Beta1(
+  client: any
+) {
   const ServiceSimulate = (options: any) => {
     const key = { type: "ServiceSimulate" };
     return useQuery(

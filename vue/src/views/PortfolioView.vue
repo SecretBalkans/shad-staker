@@ -4,9 +4,8 @@
       <div class="grid grid-cols-2">
         <div>
           <IgntAssets
-            :key="selectedAddress"
             class="px-2.5 mb-10"
-            :display-limit="10"
+            :display-limit="100"
           />
           <!--          <IgntTransactions :key="address" class="px-2.5" /> Commenting this to avoid constant api calls-->
         </div>
@@ -22,6 +21,7 @@ import IgntTransactions from "../components/IgntTransactions.vue";
 import IgntTransfer from "../components/IgntTransfer.vue";
 import { useWalletStore } from "@/stores/useWalletStore";
 import { storeToRefs } from "pinia";
+import { envOsmosis, envSecret } from "@/env";
 
-const { selectedAddress } = storeToRefs(useWalletStore());
+const { secretAddress, addresses } = storeToRefs(useWalletStore());
 </script>

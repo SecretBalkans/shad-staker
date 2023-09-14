@@ -1,26 +1,24 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   useQuery,
-  type UseQueryOptions,
   useInfiniteQuery,
-  type UseInfiniteQueryOptions,
+
 } from "@tanstack/vue-query";
-import { useClient } from "../useClient";
-import type { Ref } from "vue";
 import { useWalletStore } from "@/stores/useWalletStore";
 
-export default function useCosmosBaseTendermintV1Beta1() {
+export default function useCosmosBaseTendermintV1Beta1(
+  client: any
+) {
   const walletStore = useWalletStore();
-  const client = walletStore.activeClient;
-  const ServiceGetNodeInfo = (options: any) => {
+  const ServiceGetNodeInfo = (options?: any) => {
     const key = { type: "ServiceGetNodeInfo" };
     return useQuery(
       [key],
       () => {
-        return client?.serviceGetNodeInfo()
-          .then((res) => res.data);
+        // @ts-ignore
+        return client?.serviceGetNodeInfo().then((res) => res.data);
       },
-      {...options, enabled: !!walletStore.selectedAddress}
+      { ...options, enabled: !!walletStore.addresses[client.chainId] }
     );
   };
 
@@ -29,11 +27,10 @@ export default function useCosmosBaseTendermintV1Beta1() {
     return useQuery(
       [key],
       () => {
-        return client?.serviceGetSyncing()
-          .then((res) => res.data);
+        // @ts-ignore
+        return client?.serviceGetSyncing().then((res) => res.data);
       },
-      {...options, enabled: !!walletStore.selectedAddress}
-
+      { ...options, enabled: !!walletStore.addresses[client.chainId] }
     );
   };
 
@@ -46,8 +43,7 @@ export default function useCosmosBaseTendermintV1Beta1() {
           .serviceGetLatestBlock()
           .then((res) => res.data);
       },
-      {...options, enabled: !!walletStore.selectedAddress}
-
+      { ...options, enabled: !!walletStore.addresses[client.chainId] }
     );
   };
 
@@ -61,8 +57,7 @@ export default function useCosmosBaseTendermintV1Beta1() {
           .serviceGetBlockByHeight(height)
           .then((res) => res.data);
       },
-      {...options, enabled: !!walletStore.selectedAddress}
-
+      { ...options, enabled: !!walletStore.addresses[client.chainId] }
     );
   };
 
@@ -86,7 +81,7 @@ export default function useCosmosBaseTendermintV1Beta1() {
       },
       {
         ...options,
-        enabled: !!walletStore.selectedAddress,
+        enabled: !!walletStore.addresses[client.chainId],
         getNextPageParam: (lastPage, allPages) => {
           if (
             (lastPage.pagination?.total ?? 0) >

@@ -1,7 +1,7 @@
 <template>
   <div class="sp-acc">
     <div
-      v-if="wallet"
+      v-if="isWalletConnected"
       class="shadow-std acc-dd-btn flex items-center p-3 rounded-lg mr-3 hover:bg-gray-100 text-sm font-bold"
       :class="[state.accountDropdown ? 'active' : '']"
       style="display: flex; align-items: center"
@@ -23,8 +23,7 @@
       Connect wallet
     </IgntButton>
     <IgntAccDropdown
-      v-if="state.accountDropdown && wallet"
-      :wallet="wallet"
+      v-if="state.accountDropdown && isWalletConnected"
       :acc-name="getAccName()"
       @disconnect="disconnect"
       @close="state.accountDropdown = false"
@@ -137,8 +136,8 @@ import { IgntProfileIcon } from "@ignt/vue-library";
 import { IgntSpinner } from "@ignt/vue-library";
 import { IgntWarningIcon } from "@ignt/vue-library";
 import { useWalletStore } from "@/stores/useWalletStore";
-import useCosmosBaseTendermintV1Beta1 from "@/composables/useCosmosBaseTendermintV1Beta1";
 import useKeplr from "@/def-composables/useKeplr";
+import {envSecret} from "@/env";
 
 export interface State {
   modalPage: string;
@@ -159,31 +158,14 @@ const state = reactive(initialState);
 
 const walletStore = useWalletStore();
 const keplr = useKeplr();
-// methods
-const wallet = computed(() => walletStore.getWallet);
-const query = useCosmosBaseTendermintV1Beta1();
-const nodeInfo = query.ServiceGetNodeInfo({});
-const chainId = computed(
-  () => nodeInfo.data?.value?.default_node_info?.network ?? ""
-);
+const isWalletConnected = computed(() => !!walletStore.secretAddress);
 
 keplr.listenToAccChange(() => {
-  keplr.getKeplrAccParams(chainId.value).then(({ name, bech32Address }) => {
+  keplr.getKeplrAccParams(envSecret.chainId).then(({ name, bech32Address }) => {
     state.keplrParams.name = name;
     state.keplrParams.bech32Address = bech32Address;
   });
 });
-
-watch(
-  () => chainId.value,
-  async (newVal) => {
-    if (newVal != "") {
-      let { name, bech32Address } = await keplr.getKeplrAccParams(newVal);
-      state.keplrParams.name = name;
-      state.keplrParams.bech32Address = bech32Address;
-    }
-  }
-);
 
 let tryToConnectToKeplr = (): void => {
   state.modalPage = "connecting";
@@ -191,6 +173,10 @@ let tryToConnectToKeplr = (): void => {
   let onKeplrConnect = async () => {
     state.connectWalletModal = false;
     state.modalPage = "connect";
+    keplr.getKeplrAccParams(envSecret.chainId).then(({ name, bech32Address }) => {
+      state.keplrParams.name = name;
+      state.keplrParams.bech32Address = bech32Address;
+    });
   };
 
   let onKeplrError = (): void => {
@@ -199,13 +185,7 @@ let tryToConnectToKeplr = (): void => {
 
   keplr.connectToKeplr(onKeplrConnect, onKeplrError);
 };
-let getAccName = (): string => {
-  if (walletStore.activeClient.signer) {
-    return state.keplrParams.name;
-  } else {
-    return "";
-  }
-};
+let getAccName = (): string => state.keplrParams.name
 let disconnect = (): void => {
   state.accountDropdown = false;
   walletStore.signOut();
@@ -213,7 +193,7 @@ let disconnect = (): void => {
 
 // check if already connected
 onBeforeMount(async () => {
-  if (walletStore?.activeClient?.signer) {
+  if (keplr.isKeplrAvailable && !walletStore.secretAddress) {
     try {
       await tryToConnectToKeplr();
     } catch (e) {

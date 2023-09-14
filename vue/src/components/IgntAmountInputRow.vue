@@ -1,9 +1,9 @@
 <template>
   <div>
-    <IgntDenom :denom="amount.denom" modifier="avatar" class="z-10" />
+    <IgntDenom :denom="amount.denom" :chain-id="amount.chainId" modifier="avatar" class="z-10" />
     <div class="flex flex-col justify-between ml-4 z-10">
       <div class="font-semibold">
-        <IgntDenom :denom="amount.denom" />
+        <IgntDenom :denom="amount.denom" :chain-id="amount.chainId" />
       </div>
 
       <div
@@ -27,20 +27,22 @@
   </div>
 </template>
 <script setup lang="ts">
-import type { Amount } from "../utils/interfaces";
-import { useAsset } from "../def-composables/useAsset";
+import type { BalanceAmount } from "@/utils/interfaces";
+import { useAsset } from "@/def-composables/useAsset";
 import BigNumber from "bignumber.js";
 import { IgntAmountInput } from "@ignt/vue-library";
 import IgntDenom from "./IgntDenom.vue";
 import { computed, ref, type PropType } from "vue";
+import {useWalletStore} from "@/stores/useWalletStore";
 
 const props = defineProps({
   amount: {
-    type: Object as PropType<Amount>,
+    type: Object as PropType<BalanceAmount>,
     required: true,
-  },
+  }
 });
-const { balance } = useAsset(props.amount.denom);
+const walletStore = useWalletStore()
+const { balance } = useAsset(props.amount.denom, props.amount.chainId);
 
 const emit = defineEmits(["change"]);
 const value = ref(

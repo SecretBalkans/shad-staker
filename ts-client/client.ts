@@ -1,28 +1,23 @@
 /// <reference path="./types.d.ts" />
 import {
-  GeneratedType,
-  OfflineSigner,
-  EncodeObject,
+  type GeneratedType,
+  type OfflineSigner,
+  type EncodeObject,
   Registry,
 } from "@cosmjs/proto-signing";
-import { StdFee } from "@cosmjs/launchpad";
+import { type StdFee } from "@cosmjs/launchpad";
 import { SigningStargateClient } from "@cosmjs/stargate";
-import { Env } from "./env";
-import { UnionToIntersection, Return, Constructor } from "./helpers";
-import { Module } from "./modules";
+import { type Env } from "./env";
+import { type UnionToIntersection, type Return, type Constructor } from "./helpers";
+import { type Module } from "./modules";
 import { EventEmitter } from "events";
-import { ChainInfo } from "@keplr-wallet/types";
-
-const defaultFee = {
-  amount: [],
-  gas: "200000",
-};
 
 export class IgniteClient extends EventEmitter {
 	static plugins: Module[] = [];
   env: Env;
   signer?: OfflineSigner;
   registry: Array<[string, GeneratedType]> = [];
+  public chainId: string;
   static plugin<T extends Module | Module[]>(plugin: T) {
     const currentPlugins = this.plugins;
 
@@ -43,7 +38,7 @@ export class IgniteClient extends EventEmitter {
     if (this.signer) {
       const { address } = (await this.signer.getAccounts())[0];
       const signingClient = await SigningStargateClient.connectWithSigner(this.env.rpcURL, this.signer, { registry: new Registry(this.registry), prefix: this.env.prefix });
-      return await signingClient.signAndBroadcast(address, msgs, fee ? fee : defaultFee, memo)
+      return await signingClient.signAndBroadcast(address, msgs, fee, memo)
     } else {
       throw new Error(" Signer is not present.");
     }
@@ -71,24 +66,24 @@ export class IgniteClient extends EventEmitter {
       this.signer = undefined;
       this.emit("signer-changed", this.signer);
   }
-  async useKeplr(keplrChainInfo: Partial<ChainInfo> = {}) {
+  async useKeplr() {
     // Using queryClients directly because BaseClient has no knowledge of the modules at this stage
     try {
       const queryClient = (
         await import("./cosmos.base.tendermint.v1beta1/module")
-      ).queryClient;
+      ).queryClient;/*
       const bankQueryClient = (await import("./cosmos.bank.v1beta1/module"))
         .queryClient;
-
-      const stakingQueryClient = (await import("./cosmos.staking.v1beta1/module")).queryClient;
-      const stakingqc = stakingQueryClient({ addr: this.env.apiURL });
-      const staking = await (await stakingqc.queryParams()).data;
+*/
+      // const stakingQueryClient = (await import("./cosmos.staking.v1beta1/module")).queryClient;
+      // const stakingqc = stakingQueryClient({ addr: this.env.apiURL });
+      // const staking = await (await stakingqc.queryParams()).data;
 
       const qc = queryClient({ addr: this.env.apiURL });
       const node_info = await (await qc.serviceGetNodeInfo()).data;
-      const chainId = node_info.default_node_info?.network ?? "";
-      const chainName = chainId?.toUpperCase() + " Network";
-      const bankqc = bankQueryClient({ addr: this.env.apiURL });
+      this.chainId = node_info.default_node_info?.network ?? "";
+      // const chainName = chainId?.toUpperCase() + " Network";
+    /*  const bankqc = bankQueryClient({ addr: this.env.apiURL });
       const tokens = await (await bankqc.queryTotalSupply()).data;
       const addrPrefix = this.env.prefix ?? "cosmos";
       const rpc = this.env.rpcURL;
@@ -135,9 +130,9 @@ export class IgniteClient extends EventEmitter {
         }) ?? [];
 
       let coinType = 118;
-
-      if (chainId) {
-        const suggestOptions: ChainInfo = {
+*/
+      // if (chainId) {
+      /*  const suggestOptions: ChainInfo = {
           chainId,
           chainName,
           rpc,
@@ -149,23 +144,26 @@ export class IgniteClient extends EventEmitter {
           feeCurrencies,
           coinType,
           ...keplrChainInfo,
-        };
-        await window.keplr.experimentalSuggestChain(suggestOptions);
+        };*/
+        // await window.keplr.experimentalSuggestChain(suggestOptions);
 
-        window.keplr.defaultOptions = {
-          sign: {
-            preferNoSetFee: true,
-            preferNoSetMemo: true,
-          },
-        };
-      }
-      await window.keplr.enable(chainId);
-      this.signer = window.keplr.getOfflineSigner(chainId);
-      this.emit("signer-changed", this.signer);
+      // }
+      this.useSigner(this.signer || window.keplr.getOfflineSigner(this.chainId))
     } catch (e) {
+      console.error(e);
       throw new Error(
-        "Could not load tendermint, staking and bank modules. Please ensure your client loads them to use useKeplr()"
+        "Could nothttp://localhost:5174/ load tendermint module. Please ensure your client loads them to use useKeplr()"
       );
     }
+  }
+
+  static async enableKeplr(chainIds: string[]) {
+    window.keplr.defaultOptions = {
+      sign: {
+        preferNoSetFee: true,
+        preferNoSetMemo: true,
+      },
+    };
+    await window.keplr.enable(chainIds);
   }
 }

@@ -1,14 +1,20 @@
 import { computed } from "vue";
 import useCosmosBankV1Beta1 from "../composables/useCosmosBankV1Beta1";
 import { useWalletStore } from "@/stores/useWalletStore";
+import type { useClient } from "@/composables/useClient";
 
-export const useAsset = (denom: string) => {
+export const useAsset = (denom: string, chainId: string) => {
   const walletStore = useWalletStore();
-  const { QueryBalance } = useCosmosBankV1Beta1();
-  const enabled = computed(() => walletStore.selectedAddress != "");
-  const query = QueryBalance(walletStore.selectedAddress, { denom }, {
-    enabled
-  });
+  const { QueryBalance } = useCosmosBankV1Beta1(walletStore.activeClients[chainId]);
+  const enabled = computed(() => !!walletStore.addresses[chainId]);
+  const query = QueryBalance(
+    walletStore.addresses[chainId],
+    { denom },
+    {
+      enabled,
+      refetchOnWindowFocus: true
+    }
+  );
   const balance = computed(() => {
     return query.data?.value?.balance;
   });

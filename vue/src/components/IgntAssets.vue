@@ -51,14 +51,18 @@
           <td class="flex items-center py-5 font-semibold">
             <IgntDenom
               :denom="balance?.denom ?? ''"
+              :chain-id="balance?.chainId"
               modifier="avatar"
               class="mr-6"
               :key="balance?.denom"
             />
-            <IgntDenom :denom="balance?.denom ?? ''" :key="balance?.denom" />
+            <IgntDenom
+              :chain-id="balance?.chainId"
+              :denom="balance?.denom ?? ''" :key="balance?.denom" />
           </td>
           <td>
             <IgntDenom
+              :chain-id="balance?.chainId"
               :denom="balance?.denom ?? ''"
               modifier="path"
               class="text-normal opacity-50"
@@ -80,7 +84,7 @@
         </tr>
       </tbody>
     </table>
-    <template v-if="selectedAddress && balances.isLoading">
+    <template v-if="isConnected && balances.isLoading">
       <div role="status" class="w-100 animate-pulse flex flex-col">
         <div
           class="flex flex-row justify-between py-7 items-center flex-1"
@@ -102,7 +106,7 @@
     </template>
     <div
       v-if="
-        !selectedAddress || (!balances.isLoading && !balances.assets.length)
+        !isConnected || (!balances.isLoading && !balances.assets.length)
       "
       class="text-left text-black opacity-75 text-md font-normal py-8"
     >
@@ -123,23 +127,23 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, toRefs } from "vue";
 
-import { useAssets } from "../def-composables/useAssets";
-import { useDenom } from "../def-composables/useDenom";
+import { useAssets } from "@/def-composables/useAssets";
+import { useDenom } from "@/def-composables/useDenom";
 import IgntDenom from "./IgntDenom.vue";
 import { IgntSearchIcon } from "@ignt/vue-library";
 import { IgntClearIcon } from "@ignt/vue-library";
 import { IgntArrowIcon } from "@ignt/vue-library";
 import { useWalletStore } from "@/stores/useWalletStore";
+import { envOsmosis, envSecret } from "@/env";
 const walletStore = useWalletStore();
-const selectedAddress = walletStore.selectedAddress;
 const props = defineProps({
   displayLimit: {
     type: Number,
-    default: 1,
+    default: 100,
     required: false,
-  },
+  }
 });
-
+const isConnected = walletStore.addresses[envSecret.chainId] && walletStore.addresses[envOsmosis.chainId];
 // state
 const state = ref({
   searchQuery: "",
@@ -162,7 +166,7 @@ const filteredBalanceList = computed(() => {
       // This only works because function is called on user input and we're 99.999999% certain
       // useDenom for that denom has already been called on the root level through onUpdated in useAssets()
       // Will only fail if a component calls useAssets() but does not display anything related to the balances/does not redraw when balances are ready
-      const base_denom = useDenom(item.denom).normalized.value;
+      const base_denom = useDenom(item.denom, item.chainId).normalized.value;
       return base_denom
         .toLowerCase()
         .includes(state.value.searchQuery.toLowerCase());
