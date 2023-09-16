@@ -8,7 +8,7 @@
         >Connected wallet</span
       >
       <div class="mb-3 flex items-center">
-        <IgntProfileIcon :address="address" />
+        <IgntProfileIcon :address="selectedAddress" />
         <div class="flex flex-col ml-3">
           <span class="text-[13px] font-bold">
             {{ accName }}
@@ -16,7 +16,7 @@
           <span
             class="text-[13px] leading-normal text-gray-660 copy-address flex items-center"
             title="Copy address"
-            @click="copy(address)"
+            @click="copy(selectedAddress)"
           >
             {{ shortAddress }}
             <IgntCopyIcon class="ml-2 cursor-pointer hover:text-black" />
@@ -101,7 +101,7 @@
         </div>
         <div class="text-xl font-semibold text-center flex-1">Settings</div>
       </header>
-
+<!--
       <div class="flex justify-between items-center mb-3">
         <span> Chain </span>
         <span> {{ chainId }} </span>
@@ -123,21 +123,21 @@
       <div class="flex justify-between items-center">
         <span> WebSocket </span>
         <span> {{ wsConnected ? "connected" : "disconnected" }} </span>
-      </div>
+      </div>-->
     </div>
   </transition>
 </template>
 
 <script setup lang="ts">
-import useCosmosBaseTendermintV1Beta1 from "@/composables/useCosmosBaseTendermintV1Beta1";
-import { useConnectionStatus } from "@/def-composables/useConnectionStatus";
+// import useCosmosBaseTendermintV1Beta1 from "@/composables/useCosmosBaseTendermintV1Beta1";
+// import { useConnectionStatus } from "@/def-composables/useConnectionStatus";
 import { computed, onBeforeUnmount, onMounted, reactive } from "vue";
-import { useAddress } from "../def-composables/useAddress";
-import { useClipboard } from "../def-composables/useClipboard";
+import { useClipboard } from "@/def-composables/useClipboard";
 import { IgntChevronRightIcon } from "@ignt/vue-library";
 import { IgntExternalArrowIcon } from "@ignt/vue-library";
 import { IgntProfileIcon } from "@ignt/vue-library";
 import { IgntCopyIcon } from "@ignt/vue-library";
+import { useWalletStore } from "@/stores/useWalletStore";
 
 enum UI_STATE {
   "DEFAULT" = 1,
@@ -154,11 +154,6 @@ const initialState: State = {
 };
 
 defineProps({
-  wallet: {
-    type: Object,
-    required: true,
-  },
-
   accName: {
     type: String,
     required: true,
@@ -167,16 +162,17 @@ defineProps({
 const emit = defineEmits(["disconnect", "close"]);
 
 // composables
-let { address, shortAddress } = useAddress();
+const walletStore = useWalletStore();
+const selectedAddress = walletStore.secretAddress;
+const shortAddress = walletStore.shortSecretAddress;
 let { copy } = useClipboard();
-
 // computed
-const query = useCosmosBaseTendermintV1Beta1();
-const nodeInfo = query.ServiceGetNodeInfo({});
-const chainId = computed(
-  () => nodeInfo.data?.value?.default_node_info?.network ?? ""
-);
-const { apiConnected, rpcConnected, wsConnected } = useConnectionStatus();
+// const query = useCosmosBaseTendermintV1Beta1(walletStore.secretClient);
+// const nodeInfo = query.ServiceGetNodeInfo({});
+// const chainId = computed(
+//   () => nodeInfo.data?.value?.default_node_info?.network ?? ""
+// );
+// const { apiConnected, rpcConnected, wsConnected } = useConnectionStatus(walletStore.secretClient);
 let showDefault = computed<boolean>(
   () => state.currentUIState === UI_STATE.DEFAULT
 );

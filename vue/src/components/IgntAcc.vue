@@ -1,7 +1,7 @@
 <template>
   <div class="sp-acc">
     <div
-      v-if="wallet"
+      v-if="isWalletConnected"
       class="shadow-std acc-dd-btn flex items-center p-3 rounded-lg mr-3 hover:bg-gray-100 text-sm font-bold"
       :class="[state.accountDropdown ? 'active' : '']"
       style="display: flex; align-items: center"
@@ -23,8 +23,7 @@
       Connect wallet
     </IgntButton>
     <IgntAccDropdown
-      v-if="state.accountDropdown && wallet"
-      :wallet="wallet"
+      v-if="state.accountDropdown && isWalletConnected"
       :acc-name="getAccName()"
       @disconnect="disconnect"
       @close="state.accountDropdown = false"
@@ -44,7 +43,7 @@
           class="flex items-center flex-col my-3"
         >
           <IgntKeplrIcon class="text-[48px]" />
-          <h3 v-if="isKeplrAvailable" class="text-2xl font-bold">
+          <h3 v-if="keplr.isKeplrAvailable" class="text-2xl font-bold">
             Connect your wallet
           </h3>
           <h3 v-else>Install Keplr</h3>
@@ -61,7 +60,7 @@
       <template #body>
         <div class="max-w-xs text-center text-sm my-4 mx-auto">
           <div v-if="state.modalPage === 'connect'">
-            <p v-if="isKeplrAvailable">
+            <p v-if="keplr.isKeplrAvailable">
               Connect your Keplr wallet via the Keplr browser extension to use
               this app.
             </p>
@@ -92,7 +91,7 @@
           </div>
         </div>
       </template>
-      <template v-if="isKeplrAvailable" #footer>
+      <template v-if="keplr.isKeplrAvailable" #footer>
         <div v-if="state.modalPage === 'connect'" class="my-3">
           <IgntButton
             aria-label="Connect Keplr"
@@ -127,8 +126,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, watch } from "vue";
-import useKeplr from "@/def-composables/useKeplr";
+import { computed, onBeforeMount, onMounted, reactive, watch } from "vue";
 import IgntAccDropdown from "./IgntAccDropdown.vue";
 import { IgntButton } from "@ignt/vue-library";
 import { IgntExternalArrowIcon } from "@ignt/vue-library";
@@ -137,9 +135,9 @@ import { IgntModal } from "@ignt/vue-library";
 import { IgntProfileIcon } from "@ignt/vue-library";
 import { IgntSpinner } from "@ignt/vue-library";
 import { IgntWarningIcon } from "@ignt/vue-library";
-import { useClient } from "@/composables/useClient";
 import { useWalletStore } from "@/stores/useWalletStore";
-import useCosmosBaseTendermintV1Beta1 from "@/composables/useCosmosBaseTendermintV1Beta1";
+import useKeplr from "@/def-composables/useKeplr";
+import {envSecret} from "@/env";
 
 export interface State {
   modalPage: string;
@@ -158,28 +156,16 @@ const initialState: State = {
 // state
 const state = reactive(initialState);
 
-// composables
-const { connectToKeplr, isKeplrAvailable, getKeplrAccParams } = useKeplr();
-
-const client = useClient();
 const walletStore = useWalletStore();
-// methods
-const wallet = computed(() => walletStore.getWallet);
-const query = useCosmosBaseTendermintV1Beta1();
-const nodeInfo = query.ServiceGetNodeInfo({});
-const chainId = computed(
-  () => nodeInfo.data?.value?.default_node_info?.network ?? ""
-);
-watch(
-  () => chainId.value,
-  async (newVal) => {
-    if (newVal != "") {
-      let { name, bech32Address } = await getKeplrAccParams(newVal);
-      state.keplrParams.name = name;
-      state.keplrParams.bech32Address = bech32Address;
-    }
-  }
-);
+const keplr = useKeplr();
+const isWalletConnected = computed(() => !!walletStore.secretAddress);
+
+keplr.listenToAccChange(() => {
+  keplr.getKeplrAccParams(envSecret.chainId).then(({ name, bech32Address }) => {
+    state.keplrParams.name = name;
+    state.keplrParams.bech32Address = bech32Address;
+  });
+});
 
 let tryToConnectToKeplr = (): void => {
   state.modalPage = "connecting";
@@ -187,29 +173,27 @@ let tryToConnectToKeplr = (): void => {
   let onKeplrConnect = async () => {
     state.connectWalletModal = false;
     state.modalPage = "connect";
+    keplr.getKeplrAccParams(envSecret.chainId).then(({ name, bech32Address }) => {
+      state.keplrParams.name = name;
+      state.keplrParams.bech32Address = bech32Address;
+    });
   };
 
   let onKeplrError = (): void => {
     state.modalPage = "error";
   };
 
-  connectToKeplr(onKeplrConnect, onKeplrError);
+  keplr.connectToKeplr(onKeplrConnect, onKeplrError);
 };
-let getAccName = (): string => {
-  if (client.signer) {
-    return state.keplrParams.name;
-  } else {
-    return "";
-  }
-};
+let getAccName = (): string => state.keplrParams.name
 let disconnect = (): void => {
   state.accountDropdown = false;
   walletStore.signOut();
 };
 
 // check if already connected
-onMounted(async () => {
-  if (client.signer) {
+onBeforeMount(async () => {
+  if (keplr.isKeplrAvailable && !walletStore.secretAddress) {
     try {
       await tryToConnectToKeplr();
     } catch (e) {

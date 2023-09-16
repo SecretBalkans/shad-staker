@@ -13,9 +13,10 @@
     "example-client-ts": "file:../ts-client",
     "gradient-avatar": "^1.0.2",
     "long": "^5.2.0",
-    "pinia": "^2.0.23",
+    "pinia": "^2.1.6",
     "qrcode": "^1.5.1",
     "vue": "^3.2.41",
+    "vue-ts": "^1.0.11",
     "vue-router": "^4.1.6"
   },
   "devDependencies": {

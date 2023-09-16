@@ -26,7 +26,7 @@
       <IgntAmountSelect
         class="token-selector--main"
         :selected="state.tx.amounts"
-        :balances="(balances.assets as Amount[])"
+        :balances="balances.assets"
         @update="handleTxAmountUpdate"
       />
     </div>
@@ -66,7 +66,7 @@
       <IgntAmountSelect
         class="token-selector"
         :selected="state.tx.fees"
-        :balances="(balances.assets as Amount[])"
+        :balances="balances.assets"
         @update="handleTxFeesUpdate"
       />
 
@@ -99,8 +99,8 @@
         :disabled="!ableToTx"
         @click="sendTx"
         :busy="isTxOngoing"
-        >Send</IgntButton
-      >
+        >Send
+      </IgntButton>
       <div
         v-if="isTxError"
         class="flex items-center justify-center text-xs text-red-500 italic mt-2"
@@ -112,30 +112,31 @@
         v-if="isTxSuccess"
         class="flex items-center justify-center text-xs text-green-500 italic mt-2"
       >
-        Tx submitted succesfully
+        Tx submitted successfully
       </div>
     </div>
   </div>
 </template>
 <script setup lang="ts">
 import { fromBech32 } from "@cosmjs/encoding";
-import { useAddress } from "@/def-composables/useAddress";
 import { useAssets } from "@/def-composables/useAssets";
-import type { Amount } from "@/utils/interfaces";
+import type { Amount, BalanceAmount } from "@/utils/interfaces";
 import { reactive } from "vue";
 import Long from "long";
 import BigNumber from "bignumber.js";
-import { useClient } from "@/composables/useClient";
 import { computed } from "vue";
 import { IgntButton } from "@ignt/vue-library";
 import IgntAmountSelect from "./IgntAmountSelect.vue";
 import { IgntChevronDownIcon } from "@ignt/vue-library";
+import { useWalletStore } from "@/stores/useWalletStore";
+import { envSecret } from "@/env";
+
 interface TxData {
   receiver: string;
   ch: string;
-  amounts: Array<Amount>;
+  amounts: Array<BalanceAmount>;
   memo: string;
-  fees: Array<Amount>;
+  fees: Array<BalanceAmount>;
 }
 
 enum UI_STATE {
@@ -171,10 +172,13 @@ const initialState: State = {
   advancedOpen: false,
 };
 const state = reactive(initialState);
-const client = useClient();
-const sendMsgSend = client.CosmosBankV1Beta1.tx.sendMsgSend;
-const sendMsgTransfer = client.IbcApplicationsTransferV1.tx.sendMsgTransfer;
-const { address } = useAddress();
+const walletStore = useWalletStore();
+let chainId = envSecret.chainId;
+const activeClient = computed(() => walletStore.activeClients[chainId]);
+const address = computed(() => walletStore.addresses[chainId]);
+const sendMsgSend = activeClient.value?.CosmosBankV1Beta1?.tx.sendMsgSend;
+const sendMsgTransfer =
+  activeClient.value?.IbcApplicationsTransferV1.tx.sendMsgTransfer;
 const { balances } = useAssets(100);
 
 const resetTx = (): void => {
@@ -208,7 +212,7 @@ const sendTx = async (): Promise<void> => {
   let payload: any = {
     amount,
     toAddress: state.tx.receiver,
-    fromAddress: address.value,
+    fromAddress: address,
   };
 
   try {
@@ -217,7 +221,7 @@ const sendTx = async (): Promise<void> => {
         ...payload,
         sourcePort: "transfer",
         sourceChannel: state.tx.ch,
-        sender: address.value,
+        sender: address,
         receiver: state.tx.receiver,
         timeoutHeight: 0,
         timeoutTimestamp: Long.fromNumber(
@@ -261,20 +265,20 @@ const toggleAdvanced = () => {
     state.advancedOpen = !state.advancedOpen;
   }
 };
-const handleTxAmountUpdate = (selected: Amount[]) => {
+const handleTxAmountUpdate = (selected: BalanceAmount[]) => {
   state.tx.amounts = selected;
 };
-const handleTxFeesUpdate = (selected: Amount[]) => {
+const handleTxFeesUpdate = (selected: BalanceAmount[]) => {
   state.tx.fees = selected;
 };
 const parseAmount = (amount: string): BigNumber => {
   return amount == "" ? new BigNumber(0) : new BigNumber(amount);
 };
 const hasAnyBalance = computed<boolean>(
-  () =>
-    balances.value.assets.length > 0 &&
+  () => !!(
+    balances.value.assets.length &&
     balances.value.assets.some((x) => parseAmount(x.amount ?? "0").isPositive())
-);
+));
 const isTxOngoing = computed<boolean>(() => {
   return state.currentUIState === UI_STATE.TX_SIGNING;
 });
@@ -321,16 +325,16 @@ let ableToTx = computed<boolean>(
     validTxAmount.value &&
     validReceiver.value &&
     validTxFees.value &&
-    !!address.value
+    !!address
 );
 const bootstrapTxAmount = () => {
   if (hasAnyBalance.value) {
     let firstBalance = balances.value.assets[0];
 
     state.tx.amounts[0] = {
-      denom: "",
       ...firstBalance,
       amount: "",
+      chainId: chainId
     };
   }
 };

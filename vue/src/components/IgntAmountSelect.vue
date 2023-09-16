@@ -7,7 +7,7 @@
       class="flex justify-between items-center my-1 py-3 rounded-xl relative px-4"
       @change="
         (val) => {
-          handleInputChange({ amount: val, denom: x.denom });
+          handleInputChange({ denom: x.denom, chainId: x.chainId, isSecret: x.isSecret, amount: val });
         }
       "
     />
@@ -69,11 +69,11 @@
               }
             "
           >
-            <IgntDenom :denom="x.denom" modifier="avatar" />
+            <IgntDenom :denom="x.denom" :chain-id="x.chainId" modifier="avatar" />
 
             <div class="flex flex-col justify-between ml-4">
               <div class="font-semibold">
-                <IgntDenom :denom="x.denom" :shorten="false" />
+                <IgntDenom :denom="x.denom" :chain-id="x.chainId" :shorten="false" />
               </div>
 
               <div class="text-xs">{{ parseAmount(x.amount) }} available</div>
@@ -87,7 +87,7 @@
 
 <script setup lang="ts">
 import { useDenom } from "@/def-composables/useDenom";
-import type { Amount } from "@/utils/interfaces";
+import type { Amount, BalanceAmount } from "@/utils/interfaces";
 import BigNumber from "bignumber.js";
 import { computed, type PropType, reactive } from "vue";
 
@@ -96,7 +96,8 @@ import { IgntModal } from "@ignt/vue-library";
 import { IgntSearchIcon } from "@ignt/vue-library";
 import { IgntAddIcon } from "@ignt/vue-library";
 import IgntAmountInputRow from "./IgntAmountInputRow.vue";
-
+import { useWalletStore } from "@/stores/useWalletStore";
+const walletStore = useWalletStore();
 export interface State {
   tokenSearch: string;
   modalOpen: boolean;
@@ -111,10 +112,10 @@ const emit = defineEmits(["update"]);
 
 const props = defineProps({
   selected: {
-    type: Array as PropType<Array<Amount>>,
+    type: Array as PropType<Array<BalanceAmount>>,
   },
   balances: {
-    type: Array as PropType<Array<Amount>>,
+    type: Array as PropType<Array<BalanceAmount>>,
   },
 });
 
@@ -123,13 +124,13 @@ let state: State = reactive(initialState);
 
 // computed
 let ableToBeSelected = computed(() => {
-  const notSelected = (x: Amount) =>
-    (props.selected as Array<Amount>).every((y: Amount) => {
+  const notSelected = (x: BalanceAmount) =>
+    (props.selected as Array<BalanceAmount>).every((y: Amount) => {
       return x.denom !== y.denom;
     });
 
-  const searchFilter = (x: Amount) => {
-    const base = useDenom(x.denom).normalized.value;
+  const searchFilter = (x: BalanceAmount) => {
+    const base = useDenom(x.denom, x.chainId).normalized.value;
     if (base.toLowerCase().includes(state.tokenSearch.toLowerCase())) {
       return true;
     } else {
@@ -143,18 +144,18 @@ let parseAmount = (amount: string): BigNumber => {
   return amount == "" ? new BigNumber(0) : new BigNumber(amount);
 };
 
-const handleInputChange = (val: Amount) => {
-  const newSelected: Array<Amount> = [...(props.selected ?? [])];
+const handleInputChange = (val: BalanceAmount) => {
+  const newSelected: Array<BalanceAmount> = [...(props.selected ?? [])];
   const index = newSelected.findIndex((x) => x.denom == val.denom);
   newSelected[index].amount = val.amount;
   emit("update", newSelected);
 };
-let handleTokenSelect = (x: Amount) => {
-  let newSelected: Array<Amount> = [
+let handleTokenSelect = (x: BalanceAmount) => {
+  let newSelected: Array<BalanceAmount> = [
     ...(props.selected ?? []),
     {
-      amount: "",
-      denom: x.denom,
+      ...x,
+      amount: ""
     },
   ];
   emit("update", newSelected);

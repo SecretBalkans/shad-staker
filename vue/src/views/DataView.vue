@@ -5,5 +5,5 @@
   </div>
 </template>
 <script setup lang="ts">
-import IgntCrud from "@/components/IgntCrud.vue";
+// import IgntCrud from "@/components/IgntCrud.vue";
 </script>

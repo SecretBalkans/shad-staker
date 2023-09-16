@@ -42,7 +42,9 @@
                 {{
                   tx.type == "received" ? "+" + amount.amount : -amount.amount
                 }}
-                <IgntDenom :denom="amount.denom ?? ''" />
+                <IgntDenom
+                  :chain-id="amount.chainId"
+                  :denom="amount.denom ?? ''" />
               </span>
             </div>
             <div class="opacity-60">

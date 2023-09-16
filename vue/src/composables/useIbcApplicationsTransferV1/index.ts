@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useQuery, useInfiniteQuery } from "@tanstack/vue-query";
-import { useClient } from "../useClient";
+import type { useClient } from "../useClient";
 
-export default function useIbcApplicationsTransferV1() {
-  const client = useClient();
+export default function useIbcApplicationsTransferV1(client: ReturnType<typeof useClient>) {
   const QueryDenomTrace = (hash: string, options: any) => {
     const key = { type: "QueryDenomTrace", hash };
     return useQuery(

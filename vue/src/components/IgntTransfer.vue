@@ -13,23 +13,23 @@
     :activeLinkClasses="['text-black']"
   >
     <div class="" tabTitle="Send">
-      <IgntSend v-if="address" />
+      <IgntSend v-if="isEnabled" />
     </div>
     <div class="" tabTitle="Receive">
-      <IgntCard v-if="address">
+      <IgntCard v-if="isEnabled">
         <template #header>
           <div
             class="flex bg-gray-100 align-center items-center justify-center w-full py-10"
           >
-            <IgntQRCode :value="address" color="#000" :width="112" />
+            <IgntQRCode :value="walletProvider.secretAddress" color="#000" :width="112" />
           </div>
         </template>
         <template #default>
           <div class="p-5 break-all">
-            {{ address }}
+            {{ walletProvider.secretAddress }}
           </div>
           <div class="p-5 pt-0 text-right">
-            <IgntClipboard :text="address" />
+            <IgntClipboard :text="walletProvider.secretAddress" />
           </div>
         </template>
       </IgntCard>
@@ -39,10 +39,12 @@
 <script setup lang="ts">
 import { IgntTabs } from "@ignt/vue-library";
 import { IgntQRCode } from "@ignt/vue-library";
-import { useAddress } from "@/def-composables/useAddress";
 import { IgntCard } from "@ignt/vue-library";
 import { IgntClipboard } from "@ignt/vue-library";
 import IgntSend from "./IgntSend.vue";
+import { useWalletStore } from "@/stores/useWalletStore";
+import {computed} from "vue";
 
-const { address } = useAddress();
+const walletProvider = useWalletStore();
+const isEnabled = computed(() => !!walletProvider.secretAddress);
 </script>
