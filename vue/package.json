@@ -15,9 +15,10 @@
     "long": "^5.2.0",
     "pinia": "^2.1.6",
     "qrcode": "^1.5.1",
+    "secretjs": "^1.9.3",
     "vue": "^3.2.41",
-    "vue-ts": "^1.0.11",
-    "vue-router": "^4.1.6"
+    "vue-router": "^4.1.6",
+    "vue-ts": "^1.0.11"
   },
   "devDependencies": {
     "@cosmjs/proto-signing": "^0.29.3",

@@ -7,6 +7,7 @@ export const useWalletStore = defineStore("wallet", {
   state: () => {
     const secretClient = useClient(envSecret);
     const osmoClient = useClient(envOsmosis);
+    //secret client
     return {
       /*wallets:
               (JSON.parse(

@@ -4,6 +4,8 @@ import { useDenom } from "./useDenom";
 import { useWalletStore } from "@/stores/useWalletStore";
 import type { Amount, BalanceAmount } from "@/utils/interfaces";
 import { envOsmosis, envSecret } from "@/env";
+import { getStkdSecretBalance } from "@/secret-client/SecretClient";
+import useSecretQueryBalances from "@/composables/custom/useQuerySecretBalances";
 
 export const useAssets = (
   perPage: number
@@ -13,11 +15,27 @@ export const useAssets = (
   let secretClient = walletStore.secretClient;
   let osmoClient = walletStore.osmoClient;
 
+  // let stkdSecretBalance: any
+  // getStkdSecretBalance().then((res)=> {console.log("Res: ", res); stkdSecretBalance = res})
+  // console.log("StkdSecretBalance: ", stkdSecretBalance)
+
+  const { QuerySecretBalances } = useSecretQueryBalances(); //later pass the secret client from the wallet provider
   const { QueryAllBalances } = useCosmosBankV1Beta1(secretClient);
   const { QueryAllBalances: oQueryAllBalances } = useCosmosBankV1Beta1(osmoClient);
   let secretAddress = computed(() => walletStore.addresses[envSecret.chainId]);
   let osmoAddress = computed(() => walletStore.addresses[envOsmosis.chainId]);
   const enabled = computed(() => !!osmoAddress.value && !!secretAddress.value); // if useAssets is called with no wallet connected/no address actual query will be registered but never ran
+  const secretBalancesQuery = computed(() => QuerySecretBalances(
+    secretAddress.value,
+    "secret1k6u0cy4feepm6pehnz804zmwakuwdapm69tuc4",
+    {
+      enabled: enabled.value,
+      staleTime: 12000,
+      refetchInterval: 12000,
+      refetchIntervalInBackground: false,
+      refetchOnWindowFocus: true
+    },
+  ));
   const secretQuery = computed(() => QueryAllBalances(
     secretAddress.value,
     {},
@@ -63,6 +81,10 @@ export const useAssets = (
       }
     }, [] as HelperBalances);
   });
+  const balancesStkdSecret = computed(() => {
+    console.log("Secret balances: ", secretBalancesQuery.value.data.value)
+    return secretBalancesQuery.value.data.value
+  })
   const balances = computed(() => {
     return {
       assets: (((balancesSecret.value as Amount[]) ?? []).map((x) => ({
@@ -76,7 +98,12 @@ export const useAssets = (
           amount: x.amount,
           chainId: envOsmosis.chainId,
           isSecret: false
-        })) as BalanceAmount[]),
+        })) as BalanceAmount[]).concat([{
+          denom: "ustkdscrt",
+          amount: balancesStkdSecret.value?.toString(),
+          chainId: envSecret.chainId,
+          isSecret: true
+        }] as BalanceAmount[]),
       isLoading: isLoading.value
     };
   });
