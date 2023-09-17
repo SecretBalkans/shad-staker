@@ -30,12 +30,12 @@ export const useWalletStore = defineStore("wallet", {
       // wallets: null as Nullable<Record<string, Wallet>>,
       activeClients: {
         [envSecret.chainId]: secretClient,
-        [envOsmosis.chainId]: osmoClient
+        [envOsmosis.chainId]: osmoClient,
       } as Record<string, ReturnType<typeof useClient>>,
       addresses: {
         [envSecret.chainId]: "",
-        [envOsmosis.chainId]: ""
-      } as Record<string, string>
+        [envOsmosis.chainId]: "",
+      } as Record<string, string>,
     };
   },
   getters: {
@@ -49,7 +49,7 @@ export const useWalletStore = defineStore("wallet", {
         10
         // @ts-ignore because of IDE issue included here to avoid TS errors
       )}...${state.secretAddress?.slice(-4)}`;
-    }
+    },
     // getClient: (state) => state.activeClient,
     // getGasPrice: (state) => state.gasPrice,
     // getWallet: (state) => state.activeWallet,
@@ -92,12 +92,8 @@ export const useWalletStore = defineStore("wallet", {
       // this.activeWallet = null;
       this.authorized = false;
 
-      Object.keys(this.activeClients).forEach((chainId) =>
-        this.activeClients[chainId].removeSigner()
-      );
-      Object.keys(this.addresses).forEach(
-        (chainId) => (this.addresses[chainId] = "")
-      );
+      Object.keys(this.activeClients).forEach((chainId) => this.activeClients[chainId].removeSigner());
+      Object.keys(this.addresses).forEach((chainId) => (this.addresses[chainId] = ""));
     },
     async connectWithKeplr() {
       try {
@@ -110,9 +106,7 @@ export const useWalletStore = defineStore("wallet", {
         //   pathIncrement: null,
         //   accounts: [],
         // };
-        await IgniteClient.enableKeplr(
-          [envSecret, envOsmosis].map(({ chainId }) => chainId)
-        );
+        await IgniteClient.enableKeplr([envSecret, envOsmosis].map(({ chainId }) => chainId));
         const setAddresses = async () => {
           await Promise.all(
             Object.keys(this.activeClients).map((chainId) =>
@@ -120,12 +114,10 @@ export const useWalletStore = defineStore("wallet", {
                 const client = this.activeClients[chainId];
                 await client.useKeplr();
                 if (client.signer) {
-                  const [{ address: rawAddress }] =
-                    await client.signer.getAccounts();
+                  const [{ address: rawAddress }] = await client.signer.getAccounts();
                   this.addresses[chainId] = rawAddress;
-                  console.log(`Connected ${chainId}`)
-                  if(chainId == envSecret.chainId)
-                    this.secretJsClient = useSecretClient(rawAddress, client.signer, envSecret)
+                  console.log(`Connected ${chainId}`);
+                  if (chainId == envSecret.chainId) this.secretJsClient = useSecretClient(rawAddress, client.signer, envSecret);
                   // wallet.accounts.push({ address: rawAddress, pathIncrement: null });
                   // this.selectedAddress = rawAddress;
                 } else {
@@ -148,7 +140,7 @@ export const useWalletStore = defineStore("wallet", {
         });
 
         /* this.activeWallet = wallet;
-        
+
                 if (
                   this.activeWallet &&
                   this.activeWallet.name &&
@@ -171,7 +163,6 @@ export const useWalletStore = defineStore("wallet", {
                     wallet: JSON.stringify(this.activeWallet),
                   });
                 }*/
-
       } catch (e) {
         console.error(e);
       }
@@ -181,6 +172,6 @@ export const useWalletStore = defineStore("wallet", {
     storeWallets() {
       // window.localStorage.setItem("wallets", JSON.stringify(this.wallets));
       this.backupState = false;
-    }
-  }
+    },
+  },
 });

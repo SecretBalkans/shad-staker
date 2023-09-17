@@ -2,25 +2,20 @@ import { SecretNetworkClient, MsgExecuteContract } from "secretjs";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-while (
-  !window.keplr ||
-  !window.getEnigmaUtils ||
-  !window.getOfflineSignerOnlyAmino
-) {
+while (!window.keplr || !window.getEnigmaUtils || !window.getOfflineSignerOnlyAmino) {
   await sleep(50);
 }
 
 const CHAIN_ID = "secret-4";
-const url = "https://secretnetwork-api.lavenderfive.com:443"
+const url = "https://secretnetwork-api.lavenderfive.com:443";
+
 // const [{ address: myAddress }] = await keplrOfflineSigner.getAccounts();
 export class SecretClient {
-  signer: any
-  client: SecretNetworkClient
-  chainId: string
+  signer: any;
+  client: SecretNetworkClient;
+  chainId: string;
 
   constructor(address: string, signer: any, env: any) {
-    const keplrOfflineSigner = window.keplr.getOfflineSignerOnlyAmino(CHAIN_ID);
-
     this.client = new SecretNetworkClient({
       url: env.apiURL,
       chainId: env.chainId,
@@ -29,7 +24,7 @@ export class SecretClient {
       encryptionUtils: window.keplr.getEnigmaUtils(env.chainId),
     });
 
-    this.chainId = env.chainId
+    this.chainId = env.chainId;
   }
 
   /**
@@ -53,59 +48,84 @@ export class SecretClient {
    * @param gasPrice
    * @param gasLimit
    */
-  async executeSecretContract(contractAddress: string, msg: any, codeHash: string, gasPrice = 0.015, gasLimit = 1700000, waitForCommit = true) {
-    return await this.client.tx.broadcast([new MsgExecuteContract({
-      contract_address: contractAddress,
-      code_hash: codeHash,
-      sender: this.client.address,
-      msg,
-    })], {
-      waitForCommit,
-      gasLimit,
-      gasPriceInFeeDenom: gasPrice,
-      feeDenom: 'uscrt',
-    });
+  async executeSecretContract(
+    contractAddress: string,
+    msg: any,
+    codeHash: string,
+    gasPrice = 0.015,
+    gasLimit = 1700000,
+    waitForCommit = true
+  ) {
+    return await this.client.tx.broadcast(
+      [
+        new MsgExecuteContract({
+          contract_address: contractAddress,
+          code_hash: codeHash,
+          sender: this.client.address,
+          msg,
+        }),
+      ],
+      {
+        waitForCommit,
+        gasLimit,
+        gasPriceInFeeDenom: gasPrice,
+        feeDenom: "uscrt",
+      }
+    );
   }
 
-  //stkd secret functions
-  stkdSecretAddress = "secret1k6u0cy4feepm6pehnz804zmwakuwdapm69tuc4"
-
-  async getStkdSecretViewingKey() {
-    const result = await window.keplr.getSecret20ViewingKey(this.chainId, this.stkdSecretAddress)
-    console.log("Stkd secret viewing key: ", result)
-    return result
+  async getSecretViewingKey(contractAddress: string) {
+    const result = await window.keplr.getSecret20ViewingKey(this.chainId, contractAddress);
+    return result;
   }
 
-  async getStkdSecretBalance() {
-    console.log("Inside get stkd secret balance...")
-    console.log("Secret client: ", this.client)
+  async setSecretViewingKey(contractAddress: string) {
+    const entropy = new Uint8Array(64);
+    window.crypto?.getRandomValues(entropy);
+    const len = entropy.byteLength;
+    let binary = "";
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(entropy[i]);
+    }
+    const info = await this.executeSecretContract(
+      contractAddress,
+      {
+        set_viewing_key: {
+          key: window.btoa(binary),
+        },
+      },
+      ""
+    );
+    const key = JSON.parse(Buffer.from(info.data[0]).toString("utf-8"));
+    return this.getSecretViewingKey(contractAddress);
+  }
+
+  async getSecretBalance(contractAddress: string) {
+    console.log("Inside get stkd secret balance...");
+    console.log("Secret client: ", this.client);
 
     const codeHash = await this.client.query.compute.codeHashByContractAddress({
-        contract_address: this.stkdSecretAddress
-    })
-    console.log("Code hash of stkdSecret contract: ", codeHash)
+      contract_address: contractAddress,
+    });
+    console.log("Code hash of stkdSecret contract: ", codeHash);
 
-    const viewingKey = await this.getStkdSecretViewingKey()
-    console.log("Viewing key: ", viewingKey)
+    const viewingKey = await this.getSecretViewingKey(contractAddress);
+    console.log("Viewing key: ", viewingKey);
 
-    console.log("Sender address: ", this.client.address)
+    console.log("Sender address: ", this.client.address);
     const result: any = await this.querySecretContract(
-        this.stkdSecretAddress,
-        {
-            balance: {
-                address: this.client.address,
-                key: viewingKey,
-            }
+      contractAddress,
+      {
+        balance: {
+          address: this.client.address,
+          key: viewingKey,
         },
-        codeHash.code_hash ? codeHash.code_hash : '0'
-    )
-    console.log("Result of get balance: ", result['balance']['amount'])
-    return result['balance']['amount']
+      },
+      codeHash.code_hash ? codeHash.code_hash : "0"
+    );
+    console.log("Result of get balance: ", result["balance"]["amount"]);
+    return result["balance"]["amount"];
   }
-
 }
 
-export const useSecretClient = (address: string, signer: any, env: any) => new SecretClient(address, signer, env)
-
-
-
+export const useSecretClient = (address: string, signer: any, env: any) => new SecretClient(address, signer, env);

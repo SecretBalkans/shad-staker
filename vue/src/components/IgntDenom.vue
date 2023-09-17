@@ -51,8 +51,10 @@ const props = defineProps({
     default: true,
   },
 });
+// TODO: do not useDenom on secretAddress tokens
 const { normalized, pathExtracted } = useDenom(props.denom, props.chainId);
 // computed
+
 const short = computed(() => {
   if (normalized.value.length > 15) {
     return normalized.value.slice(0, 4) + "..." + normalized.value.slice(-4);

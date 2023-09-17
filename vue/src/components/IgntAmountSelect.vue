@@ -130,7 +130,7 @@ let ableToBeSelected = computed(() => {
     });
 
   const searchFilter = (x: BalanceAmount) => {
-    const base = useDenom(x.denom, x.chainId).normalized.value;
+    const base = x.secretAddress ? x.denom : useDenom(x.denom, x.chainId).normalized.value;
     if (base.toLowerCase().includes(state.tokenSearch.toLowerCase())) {
       return true;
     } else {
