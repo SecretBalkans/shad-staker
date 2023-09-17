@@ -2,6 +2,8 @@ import { defineStore } from "pinia";
 import { useClient } from "@/composables/useClient";
 import { envOsmosis, envSecret } from "@/env";
 import { IgniteClient } from "example-client-ts/client";
+import { SecretClient, useSecretClient } from "@/secret-client/SecretClient";
+import type { Nullable } from "@/utils/interfaces";
 
 export const useWalletStore = defineStore("wallet", {
   state: () => {
@@ -23,6 +25,7 @@ export const useWalletStore = defineStore("wallet", {
       // shortSecretAddress: "" as string, // because of IDE issue included here to avoid TS errors
       secretClient: secretClient,
       osmoClient: osmoClient,
+      secretJsClient: null as Nullable<SecretClient>,
       // gasPrice: "0.025uscrt",
       // wallets: null as Nullable<Record<string, Wallet>>,
       activeClients: {
@@ -121,6 +124,8 @@ export const useWalletStore = defineStore("wallet", {
                     await client.signer.getAccounts();
                   this.addresses[chainId] = rawAddress;
                   console.log(`Connected ${chainId}`)
+                  if(chainId == envSecret.chainId)
+                    this.secretJsClient = useSecretClient(rawAddress, client.signer, envSecret)
                   // wallet.accounts.push({ address: rawAddress, pathIncrement: null });
                   // this.selectedAddress = rawAddress;
                 } else {

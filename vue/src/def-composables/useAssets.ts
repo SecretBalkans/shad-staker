@@ -4,7 +4,6 @@ import { useDenom } from "./useDenom";
 import { useWalletStore } from "@/stores/useWalletStore";
 import type { Amount, BalanceAmount } from "@/utils/interfaces";
 import { envOsmosis, envSecret } from "@/env";
-import { getStkdSecretBalance } from "@/secret-client/SecretClient";
 import useSecretQueryBalances from "@/composables/custom/useQuerySecretBalances";
 
 export const useAssets = (
@@ -15,17 +14,14 @@ export const useAssets = (
   let secretClient = walletStore.secretClient;
   let osmoClient = walletStore.osmoClient;
 
-  // let stkdSecretBalance: any
-  // getStkdSecretBalance().then((res)=> {console.log("Res: ", res); stkdSecretBalance = res})
-  // console.log("StkdSecretBalance: ", stkdSecretBalance)
-
-  const { QuerySecretBalances } = useSecretQueryBalances(); //later pass the secret client from the wallet provider
+  const computedSecretBalances = computed(() => useSecretQueryBalances(walletStore.secretJsClient)); //later pass the secret client from the wallet provider
+  
   const { QueryAllBalances } = useCosmosBankV1Beta1(secretClient);
   const { QueryAllBalances: oQueryAllBalances } = useCosmosBankV1Beta1(osmoClient);
   let secretAddress = computed(() => walletStore.addresses[envSecret.chainId]);
   let osmoAddress = computed(() => walletStore.addresses[envOsmosis.chainId]);
-  const enabled = computed(() => !!osmoAddress.value && !!secretAddress.value); // if useAssets is called with no wallet connected/no address actual query will be registered but never ran
-  const secretBalancesQuery = computed(() => QuerySecretBalances(
+  const enabled = computed(() => !!osmoAddress.value && !!secretAddress.value && !!computedSecretBalances.value); // if useAssets is called with no wallet connected/no address actual query will be registered but never ran
+  const secretBalancesQuery = computed(() => computedSecretBalances.value?.QuerySecretBalances(
     secretAddress.value,
     "secret1k6u0cy4feepm6pehnz804zmwakuwdapm69tuc4",
     {
@@ -82,8 +78,8 @@ export const useAssets = (
     }, [] as HelperBalances);
   });
   const balancesStkdSecret = computed(() => {
-    console.log("Secret balances: ", secretBalancesQuery.value.data.value)
-    return secretBalancesQuery.value.data.value
+    console.log("Secret balances: ", secretBalancesQuery.value)
+    return secretBalancesQuery.value
   })
   const balances = computed(() => {
     return {
@@ -100,7 +96,7 @@ export const useAssets = (
           isSecret: false
         })) as BalanceAmount[]).concat([{
           denom: "ustkdscrt",
-          amount: balancesStkdSecret.value?.toString(),
+          amount: balancesStkdSecret.value?.data?.value?.toString(),
           chainId: envSecret.chainId,
           isSecret: true
         }] as BalanceAmount[]),
@@ -108,7 +104,7 @@ export const useAssets = (
     };
   });
   const isLoading = computed(() => {
-    return secretQuery.value.isLoading.value || osmoQuery.value.isLoading.value;
+    return secretQuery.value.isLoading.value || osmoQuery.value.isLoading.value || secretBalancesQuery.value.isLoading.value;
   });
 
   onBeforeUpdate(() => {
