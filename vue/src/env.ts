@@ -1,6 +1,6 @@
 const apiURLSecret =
   import.meta.env.VITE_API_COSMOS ??
-  "https://secretnetwork-api.lavenderfive.com:443"; //"http://localhost:1317";
+  "https://1rpc.io/scrt-lcd"//"https://secretnetwork-api.lavenderfive.com:443"; //"http://localhost:1317";
 const rpcURLSecret =
   import.meta.env.VITE_WS_TENDERMINT ??
   "https://secretnetwork-rpc.lavenderfive.com:443"; //"http://localhost:26657";

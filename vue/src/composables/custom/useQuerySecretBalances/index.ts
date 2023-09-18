@@ -1,4 +1,3 @@
-import type { SecretClient } from "@/secret-client/SecretClient";
 import { useQuery } from "@tanstack/vue-query";
 
 export default function useSecretQueryBalances(client: any) {
