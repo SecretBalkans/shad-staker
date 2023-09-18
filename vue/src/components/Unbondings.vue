@@ -2,8 +2,8 @@
   <div>
     <div class="Wrapper bg-gray-100 py-2 px-4 mt-5">
       <div>
-        <div>Unbond amount in next batch: {{marketInfo.unbond_amount_of_next_batch}}</div>
-        <div>Next batch estimate time: {{(new Date(marketInfo.next_unbonding_batch_time * 1000)).toDateString()}}</div>
+        <div>Unbond amount in next batch: {{marketInfo?.unbond_amount_of_next_batch}}</div>
+        <div>Next batch estimate time: {{(new Date(marketInfo?.next_unbonding_batch_time * 1000)).toDateString()}}</div>
       </div>
     </div>
     <div class="mt-4 flex justify-center text-red-900 text-xl">My Unbondings</div>
