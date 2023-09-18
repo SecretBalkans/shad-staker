@@ -3,7 +3,7 @@
     <div>Exchange rate: {{marketData?.price ? marketData.price/10**6: ""}} SCRT/stkd-SCRT</div>
     <div v-if="!props.withdraw">Stake fee: {{ stakingFees?.deposit/1000 }}%</div>
     <div v-else>Withdraw fee: {{ stakingFees?.withdraw/1000 }}%</div>
-    <div>Withdraw Period: 21 days</div>
+    <div>Withdraw Period: 21 days + batch time (0-3 days)</div>
     <div>stkd-SCRT APY: </div>
   </div>
 </template>
