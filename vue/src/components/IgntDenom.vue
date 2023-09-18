@@ -3,15 +3,15 @@
     {{ shorten ? short : normalized }}
   </span>
   <span
-    v-else-if="modifier === 'path' && pathExtracted.length > 0"
+    v-else-if="modifier === 'path'/* && pathExtracted.length > 0*/"
     :title="normalized"
   >
     <span>
-      {{ chainId }}
+      {{ chainId.split("-")[0] }}
     </span>
-    <span v-for="(channel, $index) in pathExtracted" :key="$index">
+<!--    <span v-for="(channel, $index) in pathExtracted" :key="$index" class="ml-1.5">
       {{ channel }}
-    </span>
+    </span>-->
   </span>
   <div
     v-else-if="modifier === 'avatar'"
@@ -33,6 +33,10 @@ const props = defineProps({
   denom: {
     type: String as PropType<string>,
     required: true,
+  },
+  isSecret: {
+    type: Boolean as PropType<boolean>,
+    default: false,
   },
   modifier: {
     type: String as PropType<Modifier>,
@@ -59,7 +63,7 @@ const short = computed(() => {
   if (normalized.value.length > 15) {
     return normalized.value.slice(0, 4) + "..." + normalized.value.slice(-4);
   } else {
-    return normalized.value;
+    return props.isSecret ? normalized.value : normalized.value?.replace(/^u/, '')?.toUpperCase();
   }
 });
 const sizeClassObject = computed(() => {
@@ -97,7 +101,7 @@ const sizeClassObject = computed(() => {
   text-align: center;
   letter-spacing: -0.007em;
 
-  text-transform: uppercase;
+  //text-transform: uppercase;
 
   &--small {
     width: 24px;

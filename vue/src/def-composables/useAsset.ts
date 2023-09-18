@@ -1,7 +1,6 @@
 import { computed } from "vue";
 import useCosmosBankV1Beta1 from "../composables/useCosmosBankV1Beta1";
 import { useWalletStore } from "@/stores/useWalletStore";
-import type { useClient } from "@/composables/useClient";
 
 export const useAsset = (denom: string, chainId: string) => {
   const walletStore = useWalletStore();
@@ -12,7 +11,7 @@ export const useAsset = (denom: string, chainId: string) => {
     { denom },
     {
       enabled,
-      refetchOnWindowFocus: true
+      refetchOnWindowFocus: true,
     }
   );
   const balance = computed(() => {

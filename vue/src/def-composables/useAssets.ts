@@ -4,65 +4,75 @@ import { useDenom } from "./useDenom";
 import { useWalletStore } from "@/stores/useWalletStore";
 import type { Amount, BalanceAmount } from "@/utils/interfaces";
 import { envOsmosis, envSecret } from "@/env";
+import { useSecretAssetAmount } from "./useSecretAssetAmount";
 
-export const useAssets = (perPage: number) => {
+export const useAssets = () => {
   // composables
   const walletStore = useWalletStore();
   const secretClient = walletStore.secretClient;
   const osmoClient = walletStore.osmoClient;
+  const stkdSCRTContractAddress = "secret1k6u0cy4feepm6pehnz804zmwakuwdapm69tuc4";
+  const sSCRTContractAddress = "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek";
 
-  const { QueryAllBalances } = useCosmosBankV1Beta1(secretClient);
-  const { QueryAllBalances: oQueryAllBalances } = useCosmosBankV1Beta1(osmoClient);
+  const { QueryBalance } = useCosmosBankV1Beta1(secretClient);
+  const { QueryBalance: oQueryBalance } = useCosmosBankV1Beta1(osmoClient);
   const secretAddress = computed(() => walletStore.addresses[envSecret.chainId]);
   const osmoAddress = computed(() => walletStore.addresses[envOsmosis.chainId]);
   const enabled = computed(() => !!osmoAddress.value && !!secretAddress.value); // if useAssets is called with no wallet connected/no address actual query will be registered but never ran
   const secretQuery = computed(() =>
-    QueryAllBalances(
+    QueryBalance(
       secretAddress.value,
-      {},
+      {
+        denom: "uscrt",
+      },
       {
         enabled: enabled.value,
         staleTime: 12000,
         refetchInterval: 12000,
         refetchIntervalInBackground: false,
         refetchOnWindowFocus: true,
-      },
-      perPage
+      }
     )
   );
   const osmoQuery = computed(() =>
-    oQueryAllBalances(
+    oQueryBalance(
       osmoAddress.value,
-      {},
+      { denom: "uosmo" },
       {
         enabled: enabled.value,
         staleTime: 12000,
         refetchInterval: 12000,
         refetchIntervalInBackground: false,
         refetchOnWindowFocus: true,
-      },
-      perPage
+      }
     )
   );
-  type HelperBalances = NonNullable<NonNullable<Required<typeof secretQuery.value.data>["value"]>["pages"][0]["balances"]>;
-  const balancesSecret = computed(() => {
-    return secretQuery.value.data?.value?.pages.reduce((bals, page) => {
-      if (page.balances) {
-        return bals.concat(page.balances);
-      } else {
-        return bals;
+  const osmoSecretQuery = computed(() =>
+    oQueryBalance(
+      osmoAddress.value,
+      { denom: "ibc/0954E1C28EB7AF5B72D24F3BC2B47BBB2FDF91BDDFD57B74B99E133AED40972A" },
+      {
+        enabled: enabled.value,
+        staleTime: 12000,
+        refetchInterval: 12000,
+        refetchIntervalInBackground: false,
+        refetchOnWindowFocus: true,
       }
-    }, [] as HelperBalances);
+    )
+  );
+  const balancesSecret = computed(() => {
+    return secretQuery.value.data?.value?.balance && [secretQuery.value.data?.value?.balance];
   });
   const balancesOsmo = computed(() => {
-    return osmoQuery.value.data?.value?.pages.reduce((bals, page) => {
-      if (page.balances) {
-        return bals.concat(page.balances);
-      } else {
-        return bals;
-      }
-    }, [] as HelperBalances);
+    return osmoQuery.value.data?.value?.balance && [osmoQuery.value.data?.value?.balance];
   });
+  const balancesOsmoSCRT = computed(() => {
+    return osmoSecretQuery.value.data?.value?.balance && [osmoSecretQuery.value.data?.value?.balance];
+  });
+
+  const stkdSCRTAssetAmount = useSecretAssetAmount(stkdSCRTContractAddress);
+  const sSCRTAssetAmount = useSecretAssetAmount(sSCRTContractAddress);
+
   const balances = computed(() => {
     return {
       assets: (
@@ -81,25 +91,39 @@ export const useAssets = (perPage: number) => {
             isSecret: false,
           })) as BalanceAmount[]
         )
+        .concat(
+          ((balancesOsmoSCRT.value as Amount[]) ?? []).map((x) => ({
+            denom: x.denom,
+            amount: x.amount,
+            chainId: envOsmosis.chainId,
+            isSecret: false,
+          })) as BalanceAmount[]
+        )
         .concat([
           {
-            denom: "STKD-SCRT",
-            amount: "",
-            secretAddress: "secret1k6u0cy4feepm6pehnz804zmwakuwdapm69tuc4",
+            denom: "stkd-SCRT",
+            amount: stkdSCRTAssetAmount.amount.value,
+            secretAddress: stkdSCRTContractAddress,
             chainId: envSecret.chainId,
           },
           {
             denom: "sSCRT",
-            amount: "",
+            amount: sSCRTAssetAmount.amount.value,
             chainId: envSecret.chainId,
-            secretAddress: "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek",
+            secretAddress: sSCRTContractAddress,
           },
         ] as BalanceAmount[]),
       isLoading: isLoading.value,
     };
   });
   const isLoading = computed(() => {
-    return secretQuery.value.isLoading.value || osmoQuery.value.isLoading.value;
+    return (
+      secretQuery.value.isLoading.value ||
+      osmoQuery.value.isLoading.value ||
+      osmoSecretQuery.value.isLoading.value ||
+      stkdSCRTAssetAmount.isLoading.value ||
+      sSCRTAssetAmount.isLoading.value
+    );
   });
 
   onBeforeUpdate(() => {
@@ -110,6 +134,11 @@ export const useAssets = (perPage: number) => {
     }
     if (balancesOsmo.value && balancesOsmo.value.length > 0) {
       balancesOsmo.value.forEach((x: any) => {
+        if (x.denom && !x.secretAddress) useDenom(x.denom, envOsmosis.chainId);
+      });
+    }
+    if (balancesOsmoSCRT.value && balancesOsmoSCRT.value.length > 0) {
+      balancesOsmoSCRT.value.forEach((x: any) => {
         if (x.denom && !x.secretAddress) useDenom(x.denom, envOsmosis.chainId);
       });
     }
@@ -143,14 +172,5 @@ export const useAssets = (perPage: number) => {
   return {
     balances,
     isLoading,
-    fetch: () => {
-      if (secretQuery.value.hasNextPage) {
-        secretQuery.value.fetchNextPage();
-      }
-      if (osmoQuery.value.hasNextPage) {
-        osmoQuery.value.fetchNextPage();
-      }
-    },
-    hasMore: secretQuery.value.hasNextPage || osmoQuery.value.hasNextPage,
   };
 };

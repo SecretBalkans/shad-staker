@@ -2,16 +2,13 @@ import useIbcApplicationsTransferV1 from "@/composables/useIbcApplicationsTransf
 import { computed, ref, unref } from "vue";
 import { useWalletStore } from "@/stores/useWalletStore";
 import { watch } from "vue";
-import { hydrate, dehydrate } from '@tanstack/vue-query';
+import { hydrate, dehydrate } from "@tanstack/vue-query";
 
-const useDenomInstances = {} as Record<
-  string,
-  ReturnType<typeof useDenomInstance>
->;
+const useDenomInstances = {} as Record<string, ReturnType<typeof useDenomInstance>>;
 const useDenomInstance = (denom: string, chainId: string) => {
   const isIBC = denom.indexOf("ibc/") == 0;
   const hash = denom.split("/")[1];
- /* let cacheKey = `denomTrace_${denom}`;
+  /* let cacheKey = `denomTrace_${denom}`;
   const cached = window.localStorage.getItem(cacheKey);
   if (!!cached) {
     try {
@@ -29,17 +26,17 @@ const useDenomInstance = (denom: string, chainId: string) => {
   const walletStore = useWalletStore();
   const { QueryDenomTrace } = useIbcApplicationsTransferV1(walletStore.activeClients[chainId]);
   const denomTrace = QueryDenomTrace(hash, {
-    enabled: ref(isIBC/* && !cached*/),
+    enabled: ref(isIBC /* && !cached*/),
 
     stale: Number.MAX_SAFE_INTEGER, // avoid re-fetching on redraw, focus, etc..
-    cacheTime:Number.MAX_SAFE_INTEGER,
+    cacheTime: Number.MAX_SAFE_INTEGER,
     refetchOnWindowFocus: false,
   }).data;
   const normalized = computed(() => {
     if (isIBC) {
-      return denomTrace.value?.denom_trace?.base_denom?.toUpperCase() ?? "";
+      return denomTrace.value?.denom_trace?.base_denom /*?.toUpperCase()*/ ?? "";
     } else {
-      return denom.toUpperCase();
+      return denom /*.toUpperCase()*/;
     }
   });
   const path = computed(() => {
@@ -52,21 +49,19 @@ const useDenomInstance = (denom: string, chainId: string) => {
 
   const pathExtracted = computed(() => {
     if (isIBC) {
-      return (
-        denomTrace.value?.denom_trace?.path?.match(/\d+/g)?.reverse() ?? ""
-      );
+      return denomTrace.value?.denom_trace?.path?.match(/\d+/g)?.reverse() ?? "";
     } else {
       return "";
     }
   });
 
-  let result = {
+  const result = {
     isIBC,
     denomTrace,
     normalized,
     path,
     chainId,
-    pathExtracted
+    pathExtracted,
   };
 
   /*watch(() => result, () => {
