@@ -1,0 +1,29 @@
+# Exclude Node.js modules (dependencies)
+node_modules/
+
+# Exclude development-specific files and directories
+.git/
+.gitignore
+node_modules/
+npm-debug.log
+yarn-error.log
+*.log
+*.log.*
+*.swp
+.vscode/
+.idea/
+.DS_Store
+
+# Exclude build output (if applicable)
+dist/
+
+# Exclude environment files (configurations)
+.env
+.env.local
+.env.production
+.env.staging
+
+# Exclude any other files or directories not needed in the Docker image
+Here's an explanation of what each rule does:
+
+node_modules/: Excludes the Node.js modules, which should be installed separately within t
