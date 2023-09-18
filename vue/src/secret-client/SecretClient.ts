@@ -8,6 +8,7 @@ while (!window.keplr || !window.getEnigmaUtils || !window.getOfflineSignerOnlyAm
 
 const CHAIN_ID = "secret-4";
 const url = "https://secretnetwork-api.lavenderfive.com:443";
+const stkdSecretAddress = "secret1k6u0cy4feepm6pehnz804zmwakuwdapm69tuc4"
 
 // const [{ address: myAddress }] = await keplrOfflineSigner.getAccounts();
 export class SecretClient {
@@ -100,11 +101,10 @@ export class SecretClient {
   }
 
   async getSktdSecretInfo(){
-    console.log("Inside stkdSecret Function")
-    const stkdSecretAddress = "secret1k6u0cy4feepm6pehnz804zmwakuwdapm69tuc4"
     const codeHash = await this.client.query.compute.codeHashByContractAddress({
       contract_address: stkdSecretAddress,
     }); //af74387e276be8874f07bec3a87023ee49b0e7ebe08178c49d0a49c3c98ed60e
+    console.log("Code hash: ", codeHash)
     const time = Math.round(new Date().getTime() / 1000);
     console.log("Time: ", time)
 
@@ -124,6 +124,39 @@ export class SecretClient {
     // return result
     return result
   }
+
+  async getStakingFees() {
+    const msgFees = () => ({ fee_info: {} });
+    const codeHash = await this.client.query.compute.codeHashByContractAddress({
+      contract_address: stkdSecretAddress,
+    });
+    const result: any = await this.querySecretContract(
+      stkdSecretAddress,
+      msgFees(),
+      codeHash.code_hash ? codeHash.code_hash : "0"
+    );
+    console.log("Staking Fees: ", result);
+    return result
+  }
+
+  async getUnbonding() {
+    const viewingKey = await this.getSecretViewingKey(stkdSecretAddress);
+    const msgUnbonding = () => ({ unbonding: {
+      address: this.client.address,
+      key: viewingKey
+    } });
+    const codeHash = await this.client.query.compute.codeHashByContractAddress({
+      contract_address: stkdSecretAddress,
+    });
+    const result: any = await this.querySecretContract(
+      stkdSecretAddress,
+      msgUnbonding(),
+      codeHash.code_hash ? codeHash.code_hash : "0"
+    );
+    console.log("Unbondings: ", result);
+    return result
+  }
 }
+
 
 export const useSecretClient = (address: string, signer: any, env: any) => new SecretClient(address, signer, env);

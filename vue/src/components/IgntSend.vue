@@ -24,8 +24,11 @@
         @update="handleTxAmountUpdate"
       />
     </div>
+    <div>
+      <StakingInfo :withdraw="false"/>
+    </div>
 
-    <div
+    <!-- <div
       class="flex text-xs font-semibold items-center mt-8"
       :class="[
         {
@@ -81,7 +84,7 @@
       <div v-if="isTxError" class="flex items-center justify-center text-xs text-red-500 italic mt-2">Error submitting Tx</div>
 
       <div v-if="isTxSuccess" class="flex items-center justify-center text-xs text-green-500 italic mt-2">Tx submitted successfully</div>
-    </div>
+    </div> -->
   </div>
 </template>
 <script setup lang="ts">
@@ -97,6 +100,7 @@ import IgntAmountSelect from "./IgntAmountSelect.vue";
 import { IgntChevronDownIcon } from "@ignt/vue-library";
 import { useWalletStore } from "@/stores/useWalletStore";
 import { envSecret } from "@/env";
+import StakingInfo from "./StakingInfo.vue";
 
 interface TxData {
   receiver: string;
