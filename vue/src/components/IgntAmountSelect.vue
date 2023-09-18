@@ -7,7 +7,12 @@
       class="flex justify-between items-center my-1 py-3 rounded-xl relative px-4"
       @change="
         (val) => {
-          handleInputChange({ denom: x.denom, chainId: x.chainId, isSecret: x.isSecret, amount: val });
+          handleInputChange({ denom: x.denom, chainId: x.chainId, secretAddress: x.secretAddress, amount: val });
+        }
+      "
+      @remove="
+        (val) => {
+          handleTokenRemove(val);
         }
       "
     />
@@ -36,8 +41,8 @@
       "
     >
       <template #body>
-        <div className="relative mb-4 flex items-center">
-          <div className="z-50">
+        <div class="relative mb-4 flex items-center">
+          <div class="z-50">
             <IgntSearchIcon className="ml-4" />
           </div>
           <input
@@ -69,11 +74,17 @@
               }
             "
           >
-            <IgntDenom :denom="x.denom" :chain-id="x.chainId" modifier="avatar" />
-
+            <IgntDenom :denom="x.denom" :chain-id="x.chainId" :is-secret="!!x.secretAddress" modifier="avatar" />
             <div class="flex flex-col justify-between ml-4">
               <div class="font-semibold">
-                <IgntDenom :denom="x.denom" :chain-id="x.chainId" :shorten="false" />
+                <IgntDenom :chain-id="x?.chainId" :denom="x?.denom ?? ''" :key="x?.denom" :is-secret="!!x?.secretAddress" />
+                <IgntDenom
+                  :chain-id="x?.chainId"
+                  :denom="x?.denom ?? ''"
+                  modifier="path"
+                  class="text-normal opacity-50 ml-1.5"
+                  :key="x?.denom"
+                />
               </div>
 
               <div class="text-xs">{{ parseAmount(x.amount) }} available</div>
@@ -92,10 +103,11 @@ import BigNumber from "bignumber.js";
 import { computed, type PropType, reactive } from "vue";
 
 import IgntDenom from "./IgntDenom.vue";
-import { IgntModal } from "@ignt/vue-library";
+import { IgntClearIcon, IgntModal } from "@ignt/vue-library";
 import { IgntSearchIcon } from "@ignt/vue-library";
 import { IgntAddIcon } from "@ignt/vue-library";
 import IgntAmountInputRow from "./IgntAmountInputRow.vue";
+
 export interface State {
   tokenSearch: string;
   modalOpen: boolean;
@@ -114,6 +126,10 @@ const props = defineProps({
   },
   balances: {
     type: Array as PropType<Array<BalanceAmount>>,
+  },
+  mode: {
+    type: String,
+    required: true,
   },
 });
 
@@ -135,7 +151,12 @@ let ableToBeSelected = computed(() => {
       return false;
     }
   };
-  return props.balances?.filter(notSelected).filter(searchFilter) ?? [];
+  return (
+    props.balances
+      ?.filter((b) => !b.gas && ((props.mode === "stake" && b.stakable) || (props.mode === "unstake" && b.unstakable)))
+      .filter(notSelected)
+      .filter(searchFilter) ?? []
+  );
 });
 
 let parseAmount = (amount: string): BigNumber => {
@@ -153,11 +174,16 @@ let handleTokenSelect = (x: BalanceAmount) => {
     ...(props.selected ?? []),
     {
       ...x,
-      amount: ""
+      amount: "",
     },
   ];
   emit("update", newSelected);
 
   state.modalOpen = false;
+};
+
+let handleTokenRemove = (x: BalanceAmount) => {
+  const newSelected: Array<BalanceAmount> = (props.selected ?? []).filter((d) => d.denom.toLowerCase() !== x.denom.toLowerCase());
+  emit("update", newSelected);
 };
 </script>

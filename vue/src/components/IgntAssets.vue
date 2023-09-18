@@ -32,7 +32,14 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(balance, index) in filteredBalanceList.slice(0, displayLimit)" :key="index" class="py-2">
+        <tr
+          v-for="(balance, index) in filteredBalanceList.slice(0, displayLimit)"
+          :key="index"
+          :style="{
+            borderTop: `${balance?.gas ? 'solid lightgray 0.5px' : ''}`,
+          }"
+          :class="`py-2 ${balance?.gas ? 'text-gray-600' : 'text-black'}`"
+        >
           <td class="flex items-center py-5 font-semibold">
             <IgntDenom :denom="balance?.denom ?? ''" :chain-id="balance?.chainId" modifier="avatar" class="mr-6" :key="balance?.denom" />
             <IgntDenom
@@ -41,22 +48,25 @@
               :key="balance?.denom"
               :is-secret="!!balance?.secretAddress"
             />
+            <div v-if="balance?.gas" class="ml-2" :title="`Only used for gas`">
+              <IgntWarningIcon />
+            </div>
           </td>
           <td>
             <IgntDenom
               :chain-id="balance?.chainId"
               :denom="balance?.denom ?? ''"
               modifier="path"
-              class="text-normal opacity-50"
+              class="text-normal opacity-70"
               :key="balance?.denom"
             />
           </td>
-          <td class="text-right font-bold py-5 text-black text-lg">
+          <td :class="`text-right font-bold py-5 text-lg`">
             <span v-if="balance?.secretAddress">
               <SecretAmount :secret-address="balance?.secretAddress" :amount="balance?.amount" />
             </span>
             <span v-else>
-              {{ new Intl.NumberFormat("en-GB").format(Number(balance?.amount)) }}
+              {{ balance?.amount }}
             </span>
           </td>
         </tr>
@@ -96,11 +106,12 @@ import { computed, nextTick, ref, toRefs } from "vue";
 import { useAssets } from "@/def-composables/useAssets";
 import { useDenom } from "@/def-composables/useDenom";
 import IgntDenom from "./IgntDenom.vue";
-import { IgntSearchIcon } from "@ignt/vue-library";
+import { IgntSearchIcon, IgntWarningIcon } from "@ignt/vue-library";
 import { IgntClearIcon } from "@ignt/vue-library";
 import { useWalletStore } from "@/stores/useWalletStore";
 import { envOsmosis, envSecret } from "@/env";
 import SecretAmount from "@/components/SecretAmount.vue";
+
 const walletStore = useWalletStore();
 const props = defineProps({
   displayLimit: {

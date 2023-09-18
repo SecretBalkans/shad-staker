@@ -4,24 +4,33 @@
     <div class="flex flex-col justify-between ml-4 z-10">
       <div class="font-semibold">
         <IgntDenom :denom="amount.denom" :chain-id="amount.chainId" />
+        <IgntDenom
+          :chain-id="amount?.chainId"
+          :denom="amount?.denom ?? ''"
+          modifier="path"
+          class="text-normal opacity-50 ml-1.5"
+          :key="amount?.denom"
+        />
+        <span class="float-right ml-2 pt-1 cursor-pointer">
+          <IgntClearIcon @click="() => emit('remove', amount)" />
+        </span>
       </div>
-
       <div
         class="text-xs"
         :class="{
           error: !hasEnoughBalance,
         }"
       >
-        {{ value ?? 0 }} available
+        {{ balanceAvailable ?? 0 }} available
       </div>
     </div>
 
     <div class="flex-1 w-full h-full">
       <IgntAmountInput
+        :max-decimals="6"
         class="absolute w-full left-0 text-right h-full top-0 outline-0 focus:bg-gray-100 text-3xl font-medium rounded-lg px-4"
         @update="handleChange"
       />
-
       <div class="focus-background"></div>
     </div>
   </div>
@@ -29,7 +38,7 @@
 <script setup lang="ts">
 import type { BalanceAmount } from "@/utils/interfaces";
 import BigNumber from "bignumber.js";
-import { IgntAmountInput } from "@ignt/vue-library";
+import { IgntAmountInput, IgntClearIcon } from "@ignt/vue-library";
 import IgntDenom from "./IgntDenom.vue";
 import { computed, type PropType } from "vue";
 import { useAssets } from "@/def-composables/useAssets";
@@ -42,12 +51,12 @@ const props = defineProps({
 });
 const { balances } = useAssets();
 
-const emit = defineEmits(["change"]);
-const value = computed(() => balances.value.assets.find((x) => x.denom === props.amount.denom)?.amount);
+const emit = defineEmits(["change", "remove"]);
+const balanceAvailable = computed(() => balances.value.assets.find((x) => x.denom === props.amount.denom)?.amount);
 const hasEnoughBalance = computed(() => {
   const balanceBN = new BigNumber(props.amount?.amount ?? 0);
-  if (Number(value) && value.value) {
-    return balanceBN.gte(value.value);
+  if (Number(balanceAvailable) && balanceAvailable.value) {
+    return balanceBN.lte(balanceAvailable.value);
   } else {
     return true;
   }

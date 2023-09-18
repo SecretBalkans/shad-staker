@@ -6,10 +6,11 @@ export type Nullable<T> = T | null;
 export type BalanceAmount = {
   amount: string;
   denom: string;
-
   chainId: string;
-
   secretAddress?: string;
+  gas?: boolean;
+  stakable?: boolean;
+  unstakable?: boolean;
 };
 export type Amount = {
   amount: string;

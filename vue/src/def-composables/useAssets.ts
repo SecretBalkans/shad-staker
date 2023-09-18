@@ -5,6 +5,7 @@ import { useWalletStore } from "@/stores/useWalletStore";
 import type { Amount, BalanceAmount } from "@/utils/interfaces";
 import { envOsmosis, envSecret } from "@/env";
 import { useSecretAssetAmount } from "./useSecretAssetAmount";
+import BigNumber from "bignumber.js";
 
 export const useAssets = () => {
   // composables
@@ -74,6 +75,10 @@ export const useAssets = () => {
   const sSCRTAssetAmount = useSecretAssetAmount(sSCRTContractAddress);
 
   const balances = computed(() => {
+    function parseAmount(amount: string) {
+      return BigNumber(amount).dividedBy(10**6).toString();
+    }
+
     return {
       assets: (
         ((balancesSecret.value as Amount[]) ?? []).map((x) => ({
@@ -81,22 +86,16 @@ export const useAssets = () => {
           amount: x.amount,
           chainId: envSecret.chainId,
           isSecret: false,
+          stakable: true,
         })) as BalanceAmount[]
       )
-        .concat(
-          ((balancesOsmo.value as Amount[]) ?? []).map((x) => ({
-            denom: x.denom,
-            amount: x.amount,
-            chainId: envOsmosis.chainId,
-            isSecret: false,
-          })) as BalanceAmount[]
-        )
         .concat(
           ((balancesOsmoSCRT.value as Amount[]) ?? []).map((x) => ({
             denom: x.denom,
             amount: x.amount,
             chainId: envOsmosis.chainId,
             isSecret: false,
+            stakable: true,
           })) as BalanceAmount[]
         )
         .concat([
@@ -105,14 +104,28 @@ export const useAssets = () => {
             amount: stkdSCRTAssetAmount.amount.value,
             secretAddress: stkdSCRTContractAddress,
             chainId: envSecret.chainId,
+            unstakable: true,
           },
           {
             denom: "sSCRT",
             amount: sSCRTAssetAmount.amount.value,
             chainId: envSecret.chainId,
             secretAddress: sSCRTContractAddress,
+            stakable: true,
           },
-        ] as BalanceAmount[]),
+        ] as BalanceAmount[])
+        .concat(
+          ((balancesOsmo.value as Amount[]) ?? []).map((x) => ({
+            denom: x.denom,
+            amount: x.amount,
+            chainId: envOsmosis.chainId,
+            isSecret: false,
+            gas: true,
+          })) as BalanceAmount[]
+        ).map(d => ({
+          ...d,
+          amount: parseAmount(d.amount)
+        })),
       isLoading: isLoading.value,
     };
   });

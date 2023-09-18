@@ -4,7 +4,7 @@
   </span>
   <span
     v-else-if="modifier === 'path'/* && pathExtracted.length > 0*/"
-    :title="normalized"
+    :title="chainId"
   >
     <span>
       {{ chainId.split("-")[0] }}

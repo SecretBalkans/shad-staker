@@ -12,11 +12,11 @@
     :inactiveLinkClasses="['text-gray-400']"
     :activeLinkClasses="['text-black']"
   >
-    <div class="" tabTitle="Send">
+    <div class="" tabTitle="Stake">
       <IgntSend v-if="isEnabled" />
       <MarketStatistics />
     </div>
-    <div class="" tabTitle="Receive">
+    <div class="" tabTitle="Unstake">
       <IgntCard v-if="isEnabled">
         <template #header>
           <div
