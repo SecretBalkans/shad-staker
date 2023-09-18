@@ -98,6 +98,32 @@ export class SecretClient {
     );
     return result["balance"]["amount"];
   }
+
+  async getSktdSecretInfo(){
+    console.log("Inside stkdSecret Function")
+    const stkdSecretAddress = "secret1k6u0cy4feepm6pehnz804zmwakuwdapm69tuc4"
+    const codeHash = await this.client.query.compute.codeHashByContractAddress({
+      contract_address: stkdSecretAddress,
+    }); //af74387e276be8874f07bec3a87023ee49b0e7ebe08178c49d0a49c3c98ed60e
+    const time = Math.round(new Date().getTime() / 1000);
+    console.log("Time: ", time)
+
+    const msgStakingInfo = () => {
+      const time = Math.round(new Date().getTime() / 1000);
+      return { staking_info: { time } };
+    };
+    console.log("Before query")
+    console.log("msg: ", msgStakingInfo())
+    const result: any = await this.querySecretContract(
+      stkdSecretAddress,
+      msgStakingInfo(),
+      // msgStakingInfo,
+      codeHash.code_hash ? codeHash.code_hash : "0"
+    );
+    console.log("Result of getStakingInfo: ", result);
+    // return result
+    return result
+  }
 }
 
 export const useSecretClient = (address: string, signer: any, env: any) => new SecretClient(address, signer, env);

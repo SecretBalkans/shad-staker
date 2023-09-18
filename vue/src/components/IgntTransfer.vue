@@ -14,6 +14,7 @@
   >
     <div class="" tabTitle="Send">
       <IgntSend v-if="isEnabled" />
+      <MarketStatistics />
     </div>
     <div class="" tabTitle="Receive">
       <IgntCard v-if="isEnabled">
@@ -44,6 +45,7 @@ import { IgntClipboard } from "@ignt/vue-library";
 import IgntSend from "./IgntSend.vue";
 import { useWalletStore } from "@/stores/useWalletStore";
 import {computed} from "vue";
+import MarketStatistics from "./MarketStatistics.vue";
 
 const walletProvider = useWalletStore();
 const isEnabled = computed(() => !!walletProvider.secretAddress);
