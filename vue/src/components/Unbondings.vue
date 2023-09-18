@@ -2,7 +2,7 @@
   <div>
     <div class="mt-4 flex justify-center text-red-900 text-xl">My Unbondings</div>
     <div class="Wrapper bg-gray-100 py-2 px-4 mt-5">
-      <div v-for="(unbonding, index) in unbondings.unbondings" :key="index">
+      <div v-for="(unbonding, index) in unbondings?.unbondings" :key="index">
         <div>Amount: {{ unbonding.amount }}</div>
         <div>Claimable: 
           <span v-if="!!unbonding.claimable_scrt">Yes</span>
