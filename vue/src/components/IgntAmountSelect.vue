@@ -96,8 +96,6 @@ import { IgntModal } from "@ignt/vue-library";
 import { IgntSearchIcon } from "@ignt/vue-library";
 import { IgntAddIcon } from "@ignt/vue-library";
 import IgntAmountInputRow from "./IgntAmountInputRow.vue";
-import { useWalletStore } from "@/stores/useWalletStore";
-const walletStore = useWalletStore();
 export interface State {
   tokenSearch: string;
   modalOpen: boolean;
@@ -126,7 +124,7 @@ let state: State = reactive(initialState);
 let ableToBeSelected = computed(() => {
   const notSelected = (x: BalanceAmount) =>
     (props.selected as Array<BalanceAmount>).every((y: Amount) => {
-      return x.denom !== y.denom;
+      return x.denom.toLowerCase() !== y.denom.toLowerCase();
     });
 
   const searchFilter = (x: BalanceAmount) => {
@@ -141,12 +139,12 @@ let ableToBeSelected = computed(() => {
 });
 
 let parseAmount = (amount: string): BigNumber => {
-  return amount == "" ? new BigNumber(0) : new BigNumber(amount);
+  return !amount ? new BigNumber(0) : new BigNumber(amount);
 };
 
 const handleInputChange = (val: BalanceAmount) => {
   const newSelected: Array<BalanceAmount> = [...(props.selected ?? [])];
-  const index = newSelected.findIndex((x) => x.denom == val.denom);
+  const index = newSelected.findIndex((x) => x.denom.toLowerCase() == val.denom.toLowerCase());
   newSelected[index].amount = val.amount;
   emit("update", newSelected);
 };

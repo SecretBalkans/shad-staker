@@ -1,13 +1,8 @@
 <template>
   <section>
     <header class="flex items-center justify-between">
-      <h2 class="text-3xl text-black font-semibold p-0 m-0 mb-2.5 flex-1">
-        Assets
-      </h2>
-      <div
-        v-if="balances.assets.length"
-        class="flex items-center justify-end mb-2.5"
-      >
+      <h2 class="text-3xl text-black font-semibold p-0 m-0 mb-2.5 flex-1">Assets</h2>
+      <div v-if="isConnected && balances.assets.length && !balances.isLoading" class="flex items-center justify-end mb-2.5">
         <div class="z-50">
           <IgntSearchIcon />
         </div>
@@ -23,42 +18,29 @@
             return evt;
           }"
         />
-        <div
-          v-if="searchQuery"
-          class="z-50 absolute mr-4"
-          @click.prevent="resetSearch"
-        >
+        <div v-if="searchQuery" class="z-50 absolute mr-4" @click.prevent="resetSearch">
           <IgntClearIcon />
         </div>
       </div>
     </header>
-    <table class="table-auto w-full">
+    <table class="table-auto w-full" v-if="isConnected && !balances.isLoading && balances.assets.length">
       <thead v-if="balances.assets.length">
         <tr>
           <td class="text-left text-xs text-black opacity-70">Asset</td>
           <td></td>
-          <td class="text-right text-xs text-black opacity-70">
-            Available balance
-          </td>
+          <td class="text-right text-xs text-black opacity-70">Available balance</td>
         </tr>
       </thead>
       <tbody>
-        <tr
-          v-for="(balance, index) in filteredBalanceList.slice(0, displayLimit)"
-          :key="index"
-          class="py-2"
-        >
+        <tr v-for="(balance, index) in filteredBalanceList.slice(0, displayLimit)" :key="index" class="py-2">
           <td class="flex items-center py-5 font-semibold">
+            <IgntDenom :denom="balance?.denom ?? ''" :chain-id="balance?.chainId" modifier="avatar" class="mr-6" :key="balance?.denom" />
             <IgntDenom
+              :chain-id="balance?.chainId"
               :denom="balance?.denom ?? ''"
-              :chain-id="balance?.chainId"
-              modifier="avatar"
-              class="mr-6"
               :key="balance?.denom"
+              :is-secret="!!balance?.secretAddress"
             />
-            <IgntDenom
-              :chain-id="balance?.chainId"
-              :denom="balance?.denom ?? ''" :key="balance?.denom" />
           </td>
           <td>
             <IgntDenom
@@ -71,7 +53,7 @@
           </td>
           <td class="text-right font-bold py-5 text-black text-lg">
             <span v-if="balance?.secretAddress">
-              <SecretAmount :secret-address="balance?.secretAddress"/>
+              <SecretAmount :secret-address="balance?.secretAddress" :amount="balance?.amount" />
             </span>
             <span v-else>
               {{ new Intl.NumberFormat("en-GB").format(Number(balance?.amount)) }}
@@ -79,53 +61,32 @@
           </td>
         </tr>
         <tr v-if="noSearchResults">
-          <td
-            class="text-center text-black text-md font-bold py-10"
-            colspan="3"
-          >
+          <td class="text-center text-black text-md font-bold py-10" colspan="3">
             <h4>No results for '{{ searchQuery }}'</h4>
             <p class="text-sm font-normal">Try again with another search</p>
           </td>
         </tr>
       </tbody>
     </table>
-    <template v-if="isConnected && balances.isLoading">
+    <template v-if="isConnected && (balances.isLoading || !balances.assets.length)">
       <div role="status" class="w-100 animate-pulse flex flex-col">
-        <div
-          class="flex flex-row justify-between py-7 items-center flex-1"
-          v-for="n in 3"
-          :key="'loading-skel-' + n"
-        >
+        <div class="flex flex-row justify-between py-7 items-center flex-1" v-for="n in 5" :key="'loading-skel-' + n">
           <div class="flex flex-1 items-center">
-            <div
-              class="w-8 h-8 mr-4 bg-gray-200 rounded-full dark:bg-gray-700"
-            ></div>
+            <div class="w-8 h-8 mr-4 bg-gray-200 rounded-full dark:bg-gray-700"></div>
             <div class="h-6 bg-gray-200 rounded-lg dark:bg-gray-700 w-20"></div>
           </div>
-          <div
-            class="h-6 bg-gray-200 rounded-lg dark:bg-gray-700 w-40 -mr-2"
-          ></div>
+          <div class="h-6 bg-gray-200 rounded-lg dark:bg-gray-700 w-40 -mr-2"></div>
         </div>
         <span class="sr-only">Loading...</span>
       </div>
     </template>
     <div
-      v-if="
-        !isConnected || (!balances.isLoading && !balances.assets.length)
-      "
+      v-if="isConnected && !balances.isLoading && !balances.assets.length"
       class="text-left text-black opacity-75 text-md font-normal py-8"
     >
       You have no assets
     </div>
-    <div
-      v-if="(!balances.isLoading && hasMore) || isShowMore"
-      class="shadow-std flex items-center justify-center w-40 rounded-full text-sm font-medium mx-auto inset-x-0 py-2"
-      @click="onShowMore"
-    >
-      Show more
-
-      <IgntArrowIcon class="ml-2" />
-    </div>
+    <div v-if="!isConnected" class="text-left text-black opacity-75 text-md font-normal py-8">You need to connect</div>
   </section>
 </template>
 
@@ -137,7 +98,6 @@ import { useDenom } from "@/def-composables/useDenom";
 import IgntDenom from "./IgntDenom.vue";
 import { IgntSearchIcon } from "@ignt/vue-library";
 import { IgntClearIcon } from "@ignt/vue-library";
-import { IgntArrowIcon } from "@ignt/vue-library";
 import { useWalletStore } from "@/stores/useWalletStore";
 import { envOsmosis, envSecret } from "@/env";
 import SecretAmount from "@/components/SecretAmount.vue";
@@ -147,9 +107,9 @@ const props = defineProps({
     type: Number,
     default: 100,
     required: false,
-  }
+  },
 });
-const isConnected = walletStore.addresses[envSecret.chainId] && walletStore.addresses[envOsmosis.chainId];
+const isConnected = computed(() => walletStore.addresses[envSecret.chainId] && walletStore.addresses[envOsmosis.chainId]);
 // state
 const state = ref({
   searchQuery: "",
@@ -159,7 +119,7 @@ const state = ref({
 });
 
 // composables
-let { balances, fetch, hasMore } = useAssets(props.displayLimit);
+let { balances } = useAssets();
 
 const filteredBalanceList = computed(() => {
   if (!state.value.searchQuery) {
@@ -173,9 +133,7 @@ const filteredBalanceList = computed(() => {
       // useDenom for that denom has already been called on the root level through onUpdated in useAssets()
       // Will only fail if a component calls useAssets() but does not display anything related to the balances/does not redraw when balances are ready
       const base_denom = item.secretAddress ? item.denom : useDenom(item.denom, item.chainId).normalized.value;
-      return base_denom
-        .toLowerCase()
-        .includes(state.value.searchQuery.toLowerCase());
+      return base_denom.toLowerCase().includes(state.value.searchQuery.toLowerCase());
     } else {
       return false;
     }
@@ -183,28 +141,8 @@ const filteredBalanceList = computed(() => {
 });
 
 const noSearchResults = computed(() => {
-  return (
-    !filteredBalanceList.value.length &&
-    state.value.searchQuery.length &&
-    !balances.value.isLoading
-  );
+  return !filteredBalanceList.value.length && state.value.searchQuery.length && !balances.value.isLoading;
 });
-
-const isShowMore = computed(() => {
-  if (state.value.searchQuery) {
-    return filteredBalanceList.value.length > state.value.displayLimit;
-  }
-
-  return (
-    filteredBalanceList.value.length < balances.value.assets.length &&
-    !noSearchResults.value
-  );
-});
-
-const onShowMore = () => {
-  fetch();
-  state.value.displayLimit = state.value.displayLimit + props.displayLimit;
-};
 
 const resetDisplayLimit = () => {
   state.value.displayLimit = props.displayLimit;

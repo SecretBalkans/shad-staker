@@ -12,7 +12,7 @@
           error: !hasEnoughBalance,
         }"
       >
-        {{ balance?.amount ?? 0 }} available
+        {{ value ?? 0 }} available
       </div>
     </div>
 
@@ -28,29 +28,25 @@
 </template>
 <script setup lang="ts">
 import type { BalanceAmount } from "@/utils/interfaces";
-import { useAsset } from "@/def-composables/useAsset";
 import BigNumber from "bignumber.js";
 import { IgntAmountInput } from "@ignt/vue-library";
 import IgntDenom from "./IgntDenom.vue";
-import { computed, ref, type PropType } from "vue";
-import {useWalletStore} from "@/stores/useWalletStore";
+import { computed, type PropType } from "vue";
+import { useAssets } from "@/def-composables/useAssets";
 
 const props = defineProps({
   amount: {
     type: Object as PropType<BalanceAmount>,
     required: true,
-  }
+  },
 });
-const walletStore = useWalletStore()
-const { balance } = useAsset(props.amount.denom, props.amount.chainId);
+const { balances } = useAssets();
 
 const emit = defineEmits(["change"]);
-const value = ref(
-  new BigNumber(props.amount.amount != "" ? props.amount.amount : 0)
-);
+const value = computed(() => balances.value.assets.find((x) => x.denom === props.amount.denom)?.amount);
 const hasEnoughBalance = computed(() => {
-  const balanceBN = new BigNumber(balance.value?.amount ?? 0);
-  if (Number(value)) {
+  const balanceBN = new BigNumber(props.amount?.amount ?? 0);
+  if (Number(value) && value.value) {
     return balanceBN.gte(value.value);
   } else {
     return true;

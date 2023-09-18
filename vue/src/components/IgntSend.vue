@@ -1,25 +1,19 @@
 <template>
   <div>
     <div class="pt-8">
-      <div class="text-xs text-gray-600">Send to</div>
+      <div class="text-xs text-gray-600">Stake SCRT from any chain</div>
 
       <div>
         <input
           v-model="state.tx.receiver"
           class="mt-1 py-2 px-4 h-12 bg-gray-100 border-xs text-base leading-tight w-full rounded-xl outline-0"
           :class="{
-            'border border-red-400':
-              state.tx.receiver.length > 0 && !validReceiver,
+            'border border-red-400': state.tx.receiver.length > 0 && !validReceiver,
           }"
           placeholder="Recipient address"
           :disabled="!hasAnyBalance"
         />
-        <div
-          v-if="state.tx.receiver.length > 0 && !validReceiver"
-          class="text-xs text-red-400 mt-1"
-        >
-          Invalid address
-        </div>
+        <div v-if="state.tx.receiver.length > 0 && !validReceiver" class="text-xs text-red-400 mt-1">Invalid address</div>
       </div>
     </div>
     <div v-if="hasAnyBalance">
@@ -48,27 +42,16 @@
     >
       Advanced
       <template v-if="hasAnyBalance">
-        <IgntChevronDownIcon
-          :class="{ 'rotate-180': state.advancedOpen }"
-          class="ml-1"
-        />
+        <IgntChevronDownIcon :class="{ 'rotate-180': state.advancedOpen }" class="ml-1" />
       </template>
     </div>
 
-    <div
-      v-if="state.advancedOpen && hasAnyBalance"
-      style="width: 100%; height: 24px"
-    />
+    <div v-if="state.advancedOpen && hasAnyBalance" style="width: 100%; height: 24px" />
 
     <div v-if="state.advancedOpen && hasAnyBalance" class="advanced">
       <div class="text-xs pb-2">Fees</div>
 
-      <IgntAmountSelect
-        class="token-selector"
-        :selected="state.tx.fees"
-        :balances="balances.assets"
-        @update="handleTxFeesUpdate"
-      />
+      <IgntAmountSelect class="token-selector" :selected="state.tx.fees" :balances="balances.assets" @update="handleTxFeesUpdate" />
 
       <div class="text-xs mt-8 text-gray-600">Reference (memo)</div>
 
@@ -94,26 +77,10 @@
     <div style="width: 100%; height: 24px" />
 
     <div>
-      <IgntButton
-        style="width: 100%"
-        :disabled="!ableToTx"
-        @click="sendTx"
-        :busy="isTxOngoing"
-        >Send
-      </IgntButton>
-      <div
-        v-if="isTxError"
-        class="flex items-center justify-center text-xs text-red-500 italic mt-2"
-      >
-        Error submitting Tx
-      </div>
+      <IgntButton style="width: 100%" :disabled="!ableToTx" @click="sendTx" :busy="isTxOngoing">Send </IgntButton>
+      <div v-if="isTxError" class="flex items-center justify-center text-xs text-red-500 italic mt-2">Error submitting Tx</div>
 
-      <div
-        v-if="isTxSuccess"
-        class="flex items-center justify-center text-xs text-green-500 italic mt-2"
-      >
-        Tx submitted successfully
-      </div>
+      <div v-if="isTxSuccess" class="flex items-center justify-center text-xs text-green-500 italic mt-2">Tx submitted successfully</div>
     </div>
   </div>
 </template>
@@ -177,9 +144,8 @@ let chainId = envSecret.chainId;
 const activeClient = computed(() => walletStore.activeClients[chainId]);
 const address = computed(() => walletStore.addresses[chainId]);
 const sendMsgSend = activeClient.value?.CosmosBankV1Beta1?.tx.sendMsgSend;
-const sendMsgTransfer =
-  activeClient.value?.IbcApplicationsTransferV1.tx.sendMsgTransfer;
-const { balances } = useAssets(100);
+const sendMsgTransfer = activeClient.value?.IbcApplicationsTransferV1.tx.sendMsgTransfer;
+const { balances } = useAssets();
 
 const resetTx = (): void => {
   state.tx.amounts = [];
@@ -195,12 +161,12 @@ const sendTx = async (): Promise<void> => {
 
   const fee: Array<Amount> = state.tx.fees.map((x) => ({
     denom: x.denom,
-    amount: x.amount == "" ? "0" : x.amount,
+    amount: !x.amount ? "0" : x.amount,
   }));
 
   const amount: Array<Amount> = state.tx.amounts.map((x) => ({
     denom: x.denom,
-    amount: x.amount == "" ? "0" : x.amount,
+    amount: !x.amount ? "0" : x.amount,
   }));
 
   let memo = state.tx.memo;
@@ -224,9 +190,7 @@ const sendTx = async (): Promise<void> => {
         sender: address,
         receiver: state.tx.receiver,
         timeoutHeight: 0,
-        timeoutTimestamp: Long.fromNumber(
-          new Date().getTime() + 60000
-        ).multiply(1000000),
+        timeoutTimestamp: Long.fromNumber(new Date().getTime() + 60000).multiply(1000000),
         token: state.tx.amounts[0],
       };
 
@@ -272,13 +236,11 @@ const handleTxFeesUpdate = (selected: BalanceAmount[]) => {
   state.tx.fees = selected;
 };
 const parseAmount = (amount: string): BigNumber => {
-  return amount == "" ? new BigNumber(0) : new BigNumber(amount);
+  return !amount ? new BigNumber(0) : new BigNumber(amount);
 };
 const hasAnyBalance = computed<boolean>(
-  () => !!(
-    balances.value.assets.length &&
-    balances.value.assets.some((x) => parseAmount(x.amount ?? "0").isPositive())
-));
+  () => !!(balances.value.assets.length && balances.value.assets.some((x) => parseAmount(x.amount ?? "0").isPositive()))
+);
 const isTxOngoing = computed<boolean>(() => {
   return state.currentUIState === UI_STATE.TX_SIGNING;
 });
@@ -301,11 +263,7 @@ let validTxAmount = computed<boolean>(() => {
     state.tx.amounts.every((x) => {
       let parsedAmount = parseAmount(x.amount);
 
-      return (
-        !parsedAmount.isNaN() &&
-        parsedAmount.isPositive() &&
-        !parsedAmount.isZero()
-      );
+      return !parsedAmount.isNaN() && parsedAmount.isPositive() && !parsedAmount.isZero();
     })
   );
 });
@@ -320,13 +278,7 @@ let validReceiver = computed<boolean>(() => {
 
   return valid;
 });
-let ableToTx = computed<boolean>(
-  () =>
-    validTxAmount.value &&
-    validReceiver.value &&
-    validTxFees.value &&
-    !!address
-);
+let ableToTx = computed<boolean>(() => validTxAmount.value && validReceiver.value && validTxFees.value && !!address.value);
 const bootstrapTxAmount = () => {
   if (hasAnyBalance.value) {
     let firstBalance = balances.value.assets[0];
@@ -334,7 +286,7 @@ const bootstrapTxAmount = () => {
     state.tx.amounts[0] = {
       ...firstBalance,
       amount: "",
-      chainId: chainId
+      chainId: chainId,
     };
   }
 };

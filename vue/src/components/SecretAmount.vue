@@ -1,50 +1,33 @@
 <template>
-  <span v-if="hasViewingKey">
-    {{ new Intl.NumberFormat("en-GB").format(Number(amount)) }}
+  <span v-if="vk.hasViewingKey.value">
+    <span v-if="Number.isNaN(Number(amount))"> Loading... </span>
+    <span v-else>
+      {{ new Intl.NumberFormat("en-GB").format(Number(amount)) }}
+    </span>
   </span>
-  <ignt-button v-if="!hasViewingKey" @click="setViewingKey()">Viewing key</ignt-button>
+  <ignt-button v-if="!vk.hasViewingKey.value" @click="vk.setViewingKey()">View balance</ignt-button>
 </template>
 
 <script lang="ts" setup>
 import { IgntButton } from "@ignt/vue-library";
-import { useWalletStore } from "@/stores/useWalletStore";
-import {computed, onMounted, ref} from "vue";
-import useSecretQueryBalances from "@/composables/custom/useQuerySecretBalances";
-import { envSecret } from "@/env";
+import { computed } from "vue";
+import { useViewingKey } from "@/def-composables/useViewingKey";
+
 const props = defineProps({
   secretAddress: {
     type: String,
     default: "",
     required: true,
   },
+  amount: {
+    type: String,
+    default: "NaN",
+    required: true,
+  },
 });
-const walletStore = useWalletStore();
-const hasViewingKey = ref(false);
-function updateViewingKey() {
-  walletStore.secretJsClient?.getSecretViewingKey(props.secretAddress).then((vk) => {
-    hasViewingKey.value = !!vk
-  });
-}
-onMounted(() => {
-  updateViewingKey();
-});
-function setViewingKey() {
-  window.keplr.suggestToken(envSecret.chainId, props.secretAddress).then(updateViewingKey);
-}
-const enabled = computed(() => !!hasViewingKey.value); // if useAssets is called with no wallet connected/no address actual query will be registered but never ran
-const computedSecretBalances = computed(() => useSecretQueryBalances(walletStore.secretJsClient)); //later pass the secret client from the wallet provider
-const secretAddress = computed(() => walletStore.addresses[envSecret.chainId]);
-
-const secretBalancesQuery = computed(() =>
-  computedSecretBalances.value?.QuerySecretBalances(secretAddress.value, props.secretAddress, {
-    enabled: enabled.value,
-    staleTime: 12000,
-    refetchInterval: 12000,
-    refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
-  })
-);
-const amount = computed(() => {
-  return secretBalancesQuery?.value?.data.value;
+const vk = computed(() => {
+  const vk = useViewingKey(props.secretAddress);
+  vk.updateViewingKey();
+  return vk;
 });
 </script>
