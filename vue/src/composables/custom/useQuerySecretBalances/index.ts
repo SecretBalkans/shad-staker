@@ -1,50 +1,18 @@
-import { useInfiniteQuery } from "@tanstack/vue-query";
+import type { SecretClient } from "@/secret-client/SecretClient";
+import { useQuery } from "@tanstack/vue-query";
 
-export default function useQueryBalances() {
-  const QueryAllBalances = (
-    client: any,
-    address: string,
-    query: any,
-    options: any,
-    perPage: number
-  ) => {
-    const key = { type: "QueryAllBalances", address, query };
-    return useInfiniteQuery(
+export default function useSecretQueryBalances(client: any) {
+  const QuerySecretBalances = (address: string, contractAddress: string, options: any) => {
+    const key = { type: "QuerySecretBalances", address, contractAddress };
+    return useQuery(
       [key],
-      ({ pageParam = 1 }: { pageParam?: number }) => {
-        const { address, query } = key;
-        query["pagination.limit"] = perPage;
-        query["pagination.offset"] = (pageParam - 1) * perPage;
-        query["pagination.count_total"] = true;
-        return client.CosmosBankV1Beta1.query
-          .queryAllBalances(address, query ?? undefined)
-          .then((res: any) => ({
-            ...res.data,
-            pageParam,
-          }));
+      () => {
+        const { contractAddress } = key;
+        return client?.getSecretBalance(contractAddress).then((res) => res);
       },
-      {
-        ...options,
-        getNextPageParam: (lastPage, allPages) => {
-          if (
-            (lastPage.pagination?.total ?? 0) >
-            (lastPage.pageParam ?? 0) * perPage
-          ) {
-            return lastPage.pageParam + 1;
-          } else {
-            return undefined;
-          }
-        },
-        getPreviousPageParam: (firstPage, allPages) => {
-          if (firstPage.pageParam == 1) {
-            return undefined;
-          } else {
-            return firstPage.pageParam - 1;
-          }
-        },
-      }
+      options
     );
   };
 
-  return { QueryAllBalances };
+  return { QuerySecretBalances };
 }

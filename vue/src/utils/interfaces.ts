@@ -9,8 +9,8 @@ export type BalanceAmount = {
 
   chainId: string;
 
-  isSecret?: boolean;
-}
+  secretAddress?: string;
+};
 export type Amount = {
   amount: string;
   denom: string;

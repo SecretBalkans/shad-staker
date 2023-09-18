@@ -70,7 +70,12 @@
             />
           </td>
           <td class="text-right font-bold py-5 text-black text-lg">
-            {{ new Intl.NumberFormat("en-GB").format(Number(balance?.amount)) }}
+            <span v-if="balance?.secretAddress">
+              <SecretAmount :secret-address="balance?.secretAddress"/>
+            </span>
+            <span v-else>
+              {{ new Intl.NumberFormat("en-GB").format(Number(balance?.amount)) }}
+            </span>
           </td>
         </tr>
         <tr v-if="noSearchResults">
@@ -135,6 +140,7 @@ import { IgntClearIcon } from "@ignt/vue-library";
 import { IgntArrowIcon } from "@ignt/vue-library";
 import { useWalletStore } from "@/stores/useWalletStore";
 import { envOsmosis, envSecret } from "@/env";
+import SecretAmount from "@/components/SecretAmount.vue";
 const walletStore = useWalletStore();
 const props = defineProps({
   displayLimit: {
@@ -166,7 +172,7 @@ const filteredBalanceList = computed(() => {
       // This only works because function is called on user input and we're 99.999999% certain
       // useDenom for that denom has already been called on the root level through onUpdated in useAssets()
       // Will only fail if a component calls useAssets() but does not display anything related to the balances/does not redraw when balances are ready
-      const base_denom = useDenom(item.denom, item.chainId).normalized.value;
+      const base_denom = item.secretAddress ? item.denom : useDenom(item.denom, item.chainId).normalized.value;
       return base_denom
         .toLowerCase()
         .includes(state.value.searchQuery.toLowerCase());

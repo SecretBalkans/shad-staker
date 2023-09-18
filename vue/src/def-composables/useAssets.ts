@@ -5,46 +5,46 @@ import { useWalletStore } from "@/stores/useWalletStore";
 import type { Amount, BalanceAmount } from "@/utils/interfaces";
 import { envOsmosis, envSecret } from "@/env";
 
-export const useAssets = (
-  perPage: number
-) => {
+export const useAssets = (perPage: number) => {
   // composables
   const walletStore = useWalletStore();
-  let secretClient = walletStore.secretClient;
-  let osmoClient = walletStore.osmoClient;
+  const secretClient = walletStore.secretClient;
+  const osmoClient = walletStore.osmoClient;
 
   const { QueryAllBalances } = useCosmosBankV1Beta1(secretClient);
   const { QueryAllBalances: oQueryAllBalances } = useCosmosBankV1Beta1(osmoClient);
-  let secretAddress = computed(() => walletStore.addresses[envSecret.chainId]);
-  let osmoAddress = computed(() => walletStore.addresses[envOsmosis.chainId]);
+  const secretAddress = computed(() => walletStore.addresses[envSecret.chainId]);
+  const osmoAddress = computed(() => walletStore.addresses[envOsmosis.chainId]);
   const enabled = computed(() => !!osmoAddress.value && !!secretAddress.value); // if useAssets is called with no wallet connected/no address actual query will be registered but never ran
-  const secretQuery = computed(() => QueryAllBalances(
-    secretAddress.value,
-    {},
-    {
-      enabled: enabled.value,
-      staleTime: 12000,
-      refetchInterval: 12000,
-      refetchIntervalInBackground: false,
-      refetchOnWindowFocus: true
-    },
-    perPage
-  ));
-  const osmoQuery = computed(() => oQueryAllBalances(
-    osmoAddress.value,
-    {},
-    {
-      enabled: enabled.value,
-      staleTime: 12000,
-      refetchInterval: 12000,
-      refetchIntervalInBackground: false,
-      refetchOnWindowFocus: true
-    },
-    perPage
-  ));
-  type HelperBalances = NonNullable<
-    NonNullable<Required<typeof secretQuery.value.data>["value"]>["pages"][0]["balances"]
-  >;
+  const secretQuery = computed(() =>
+    QueryAllBalances(
+      secretAddress.value,
+      {},
+      {
+        enabled: enabled.value,
+        staleTime: 12000,
+        refetchInterval: 12000,
+        refetchIntervalInBackground: false,
+        refetchOnWindowFocus: true,
+      },
+      perPage
+    )
+  );
+  const osmoQuery = computed(() =>
+    oQueryAllBalances(
+      osmoAddress.value,
+      {},
+      {
+        enabled: enabled.value,
+        staleTime: 12000,
+        refetchInterval: 12000,
+        refetchIntervalInBackground: false,
+        refetchOnWindowFocus: true,
+      },
+      perPage
+    )
+  );
+  type HelperBalances = NonNullable<NonNullable<Required<typeof secretQuery.value.data>["value"]>["pages"][0]["balances"]>;
   const balancesSecret = computed(() => {
     return secretQuery.value.data?.value?.pages.reduce((bals, page) => {
       if (page.balances) {
@@ -65,19 +65,37 @@ export const useAssets = (
   });
   const balances = computed(() => {
     return {
-      assets: (((balancesSecret.value as Amount[]) ?? []).map((x) => ({
-        denom: x.denom,
-        amount: x.amount,
-        chainId: envSecret.chainId,
-        isSecret: false
-      })) as BalanceAmount[]).concat(
-        ((balancesOsmo.value as Amount[]) ?? []).map((x) => ({
+      assets: (
+        ((balancesSecret.value as Amount[]) ?? []).map((x) => ({
           denom: x.denom,
           amount: x.amount,
-          chainId: envOsmosis.chainId,
-          isSecret: false
-        })) as BalanceAmount[]),
-      isLoading: isLoading.value
+          chainId: envSecret.chainId,
+          isSecret: false,
+        })) as BalanceAmount[]
+      )
+        .concat(
+          ((balancesOsmo.value as Amount[]) ?? []).map((x) => ({
+            denom: x.denom,
+            amount: x.amount,
+            chainId: envOsmosis.chainId,
+            isSecret: false,
+          })) as BalanceAmount[]
+        )
+        .concat([
+          {
+            denom: "STKD-SCRT",
+            amount: "",
+            secretAddress: "secret1k6u0cy4feepm6pehnz804zmwakuwdapm69tuc4",
+            chainId: envSecret.chainId,
+          },
+          {
+            denom: "sSCRT",
+            amount: "",
+            chainId: envSecret.chainId,
+            secretAddress: "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek",
+          },
+        ] as BalanceAmount[]),
+      isLoading: isLoading.value,
     };
   });
   const isLoading = computed(() => {
@@ -87,12 +105,12 @@ export const useAssets = (
   onBeforeUpdate(() => {
     if (balancesSecret.value && balancesSecret.value.length > 0) {
       balancesSecret.value.forEach((x: any) => {
-        if (x.denom) useDenom(x.denom, envSecret.chainId);
+        if (x.denom && !x.secretAddress) useDenom(x.denom, envSecret.chainId);
       });
     }
     if (balancesOsmo.value && balancesOsmo.value.length > 0) {
       balancesOsmo.value.forEach((x: any) => {
-        if (x.denom) useDenom(x.denom, envOsmosis.chainId);
+        if (x.denom && !x.secretAddress) useDenom(x.denom, envOsmosis.chainId);
       });
     }
   });
@@ -126,13 +144,13 @@ export const useAssets = (
     balances,
     isLoading,
     fetch: () => {
-      if(secretQuery.value.hasNextPage) {
-        secretQuery.value.fetchNextPage()
+      if (secretQuery.value.hasNextPage) {
+        secretQuery.value.fetchNextPage();
       }
-      if(osmoQuery.value.hasNextPage) {
-        osmoQuery.value.fetchNextPage()
+      if (osmoQuery.value.hasNextPage) {
+        osmoQuery.value.fetchNextPage();
       }
     },
-    hasMore: secretQuery.value.hasNextPage || osmoQuery.value.hasNextPage
+    hasMore: secretQuery.value.hasNextPage || osmoQuery.value.hasNextPage,
   };
 };
