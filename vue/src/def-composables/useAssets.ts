@@ -6,14 +6,13 @@ import type { Amount, BalanceAmount } from "@/utils/interfaces";
 import { envOsmosis, envSecret } from "@/env";
 import { useSecretAssetAmount } from "./useSecretAssetAmount";
 import BigNumber from "bignumber.js";
+import { sSCRTContractAddress, stkdSCRTContractAddress, scrtDenomOsmosis } from "@/utils/const";
 
 export const useAssets = () => {
   // composables
   const walletStore = useWalletStore();
   const secretClient = walletStore.secretClient;
   const osmoClient = walletStore.osmoClient;
-  const stkdSCRTContractAddress = "secret1k6u0cy4feepm6pehnz804zmwakuwdapm69tuc4";
-  const sSCRTContractAddress = "secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek";
 
   const { QueryBalance } = useCosmosBankV1Beta1(secretClient);
   const { QueryBalance: oQueryBalance } = useCosmosBankV1Beta1(osmoClient);
@@ -51,7 +50,7 @@ export const useAssets = () => {
   const osmoSecretQuery = computed(() =>
     oQueryBalance(
       osmoAddress.value,
-      { denom: "ibc/0954E1C28EB7AF5B72D24F3BC2B47BBB2FDF91BDDFD57B74B99E133AED40972A" },
+      { denom: scrtDenomOsmosis },
       {
         enabled: enabled.value,
         staleTime: 12000,
@@ -76,7 +75,9 @@ export const useAssets = () => {
 
   const balances = computed(() => {
     function parseAmount(amount: string) {
-      return BigNumber(amount).dividedBy(10**6).toString();
+      return BigNumber(amount)
+        .dividedBy(10 ** 6)
+        .toString();
     }
 
     return {
@@ -85,7 +86,6 @@ export const useAssets = () => {
           denom: x.denom,
           amount: x.amount,
           chainId: envSecret.chainId,
-          isSecret: false,
           stakable: true,
         })) as BalanceAmount[]
       )
@@ -94,7 +94,6 @@ export const useAssets = () => {
             denom: x.denom,
             amount: x.amount,
             chainId: envOsmosis.chainId,
-            isSecret: false,
             stakable: true,
           })) as BalanceAmount[]
         )
@@ -119,12 +118,12 @@ export const useAssets = () => {
             denom: x.denom,
             amount: x.amount,
             chainId: envOsmosis.chainId,
-            isSecret: false,
             gas: true,
           })) as BalanceAmount[]
-        ).map(d => ({
+        )
+        .map((d) => ({
           ...d,
-          amount: parseAmount(d.amount)
+          amount: parseAmount(d.amount),
         })),
       isLoading: isLoading.value,
     };

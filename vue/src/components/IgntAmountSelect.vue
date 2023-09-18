@@ -1,8 +1,8 @@
 <template>
   <div class="flex flex-col">
     <IgntAmountInputRow
-      v-for="(x, i) in selected"
-      :key="`${x.denom}-${i}`"
+      v-for="(x) in selected"
+      :key="`${x.denom}`"
       :amount="x"
       class="flex justify-between items-center my-1 py-3 rounded-xl relative px-4"
       @change="

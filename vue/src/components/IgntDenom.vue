@@ -2,22 +2,15 @@
   <span v-if="modifier === 'base'" :title="normalized">
     {{ shorten ? short : normalized }}
   </span>
-  <span
-    v-else-if="modifier === 'path'/* && pathExtracted.length > 0*/"
-    :title="chainId"
-  >
+  <span v-else-if="modifier === 'path' /* && pathExtracted.length > 0*/" :title="chainId">
     <span>
-      {{ chainId.split("-")[0] }}
+      {{ chainId?.split("-")[0] }}
     </span>
-<!--    <span v-for="(channel, $index) in pathExtracted" :key="$index" class="ml-1.5">
+    <!--    <span v-for="(channel, $index) in pathExtracted" :key="$index" class="ml-1.5">
       {{ channel }}
     </span>-->
   </span>
-  <div
-    v-else-if="modifier === 'avatar'"
-    :class="[sizeClassObject, 'token-avatar']"
-    :title="normalized"
-  >
+  <div v-else-if="modifier === 'avatar'" :class="[sizeClassObject, 'token-avatar']" :title="normalized">
     {{ short.slice(0, 1) }}
   </div>
 </template>
@@ -25,7 +18,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { PropType } from "vue";
-import { useDenom } from "../def-composables/useDenom";
+import { useDenom } from "@/def-composables/useDenom";
 
 type Modifier = "avatar" | "path" | "base";
 type Size = "small" | "medium" | "large";
@@ -63,7 +56,7 @@ const short = computed(() => {
   if (normalized.value.length > 15) {
     return normalized.value.slice(0, 4) + "..." + normalized.value.slice(-4);
   } else {
-    return props.isSecret ? normalized.value : normalized.value?.replace(/^u/, '')?.toUpperCase();
+    return props.isSecret ? normalized.value : normalized.value?.replace(/^u/, "")?.toUpperCase();
   }
 });
 const sizeClassObject = computed(() => {

@@ -50,19 +50,10 @@
     <div v-if="state.advancedOpen && hasAnyBalance" style="width: 100%; height: 24px" />
 
     <div v-if="state.advancedOpen && hasAnyBalance" class="advanced">
-      <div class="text-xs pb-2">Fees</div>
+      <div class="text-xs pb-2">Route</div>
 
-      <IgntAmountSelect
-        class="token-selector"
-        :selected="state.tx.fees"
-        :balances="balances.assets"
-        @update="handleTxFeesUpdate"
-        :mode="'stake'"
-      />
-
-      <div class="text-xs mt-8 text-gray-600">Reference (memo)</div>
-
-      <div class="mb-4">
+      <ScrtStakeRoute :amounts="state.tx.amounts" />
+      <!--      <div class="mb-4">
         <input
           v-model="state.tx.memo"
           class="mt-1 py-2 px-4 h-12 bg-gray-100 border-xs text-base leading-tight w-full rounded-xl outline-0"
@@ -78,7 +69,7 @@
           class="mt-1 py-2 px-4 h-12 bg-gray-100 border-xs text-base leading-tight w-full rounded-xl outline-0"
           placeholder="Enter a channel"
         />
-      </div>
+      </div>-->
     </div>
 
     <div style="width: 100%; height: 24px" />
@@ -92,7 +83,6 @@
   </div>
 </template>
 <script setup lang="ts">
-import { fromBech32 } from "@cosmjs/encoding";
 import { useAssets } from "@/def-composables/useAssets";
 import type { Amount, BalanceAmount } from "@/utils/interfaces";
 import { reactive } from "vue";
@@ -104,6 +94,7 @@ import IgntAmountSelect from "./IgntAmountSelect.vue";
 import { IgntChevronDownIcon } from "@ignt/vue-library";
 import { useWalletStore } from "@/stores/useWalletStore";
 import { envSecret } from "@/env";
+import ScrtStakeRoute from "@/components/ScrtStakeRoute.vue";
 
 interface TxData {
   receiver: string;
@@ -238,9 +229,6 @@ const toggleAdvanced = () => {
 };
 const handleTxAmountUpdate = (selected: BalanceAmount[]) => {
   state.tx.amounts = selected;
-};
-const handleTxFeesUpdate = (selected: BalanceAmount[]) => {
-  state.tx.fees = selected;
 };
 const parseAmount = (amount: string): BigNumber => {
   return !amount ? new BigNumber(0) : new BigNumber(amount);
