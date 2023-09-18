@@ -1,7 +1,8 @@
 <template>
-  <div class="Wrapper bg-gray-100 py-2 px-4 mt-5 ">
+  <div class="Wrapper bg-gray-100 py-2 px-4 mt-5">
     <div>Exchange rate: {{marketData?.price ? marketData.price/10**6: ""}} SCRT/stkd-SCRT</div>
-    <div>Stake fee: {{ stakingFees?.deposit/1000 }}%</div>
+    <div v-if="!props.withdraw">Stake fee: {{ stakingFees?.deposit/1000 }}%</div>
+    <div v-else>Withdraw fee: {{ stakingFees?.withdraw/1000 }}%</div>
     <div>Withdraw Period: 21 days</div>
     <div>stkd-SCRT APY: </div>
   </div>
@@ -12,6 +13,12 @@ import { useStakingFees } from "@/def-composables/useStakingFees";
 
 const marketData = useStkdSecretInfo()
 const stakingFees = useStakingFees()
+
+const props = defineProps({
+  withdraw: {
+    type: Boolean
+  }
+})
 
 </script>
 

@@ -23,18 +23,18 @@ export default function useQueryStkdSecretInfo(client: any) {
       );
     };
 
-    const QueryExchangeRate = (options: any) => {
-      const key = { type: "QueryStkdSecretInfo" };
+    const QueryUnbonding = (options: any) => {
+      const key = { type: "QueryUnbonding" };
       return useQuery(
         [key],
         () => {
-          return client?.getSktdSecretInfo().then((res) => res);
+          return client?.getUnbonding().then((res) => res);
         },
         options
       );
     };
   
   
-    return { QueryStkdSecretInfo, QueryStakingFees };
+    return { QueryStkdSecretInfo, QueryStakingFees, QueryUnbonding };
 }
   

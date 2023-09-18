@@ -25,7 +25,7 @@
       />
     </div>
     <div>
-      <StakingInfo />
+      <StakingInfo :withdraw="false"/>
     </div>
 
     <!-- <div

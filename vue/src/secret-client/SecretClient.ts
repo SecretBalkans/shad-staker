@@ -138,6 +138,24 @@ export class SecretClient {
     console.log("Staking Fees: ", result);
     return result
   }
+
+  async getUnbonding() {
+    const viewingKey = await this.getSecretViewingKey(stkdSecretAddress);
+    const msgUnbonding = () => ({ unbonding: {
+      address: this.client.address,
+      key: viewingKey
+    } });
+    const codeHash = await this.client.query.compute.codeHashByContractAddress({
+      contract_address: stkdSecretAddress,
+    });
+    const result: any = await this.querySecretContract(
+      stkdSecretAddress,
+      msgUnbonding(),
+      codeHash.code_hash ? codeHash.code_hash : "0"
+    );
+    console.log("Unbondings: ", result);
+    return result
+  }
 }
 
 
