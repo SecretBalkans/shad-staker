@@ -1,4 +1,4 @@
-FROM node:16-alpine
+FROM --platform=linux/amd64 node:lts-alpine
 
 # Set the working directory inside the container
 WORKDIR /app/vue
