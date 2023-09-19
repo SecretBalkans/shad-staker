@@ -2,15 +2,15 @@
   <table class="table-auto">
     <tbody>
       <!--      <tr class="text-xs">
-    <td v-for="(routeItem, j) in tokenRoutes2[0]" :key="routeItem?.denom || j">
-      <span v-if="routeItem">
-        <ignt-chevron-right-icon class="inline-flex text-gray-500 text-xs" v-if="routeItem.txName" />
-        <span class="inline-flex ml-1" v-if="routeItem.txName">{{ routeItem.txName }}</span>
-        <RouteAsset class="flex" :amount="routeItem"></RouteAsset>
-        <ignt-chevron-right-icon class="inline-flex text-gray-500 text-xs mr-0.5" v-if="tokenRoutes2[i+1]?.txName" />
-      </span>
-    </td>
-  </tr>-->
+  <td v-for="(routeItem, j) in tokenRoutes2[0]" :key="routeItem?.denom || j">
+    <span v-if="routeItem">
+      <ignt-chevron-right-icon class="inline-flex text-gray-500 text-xs" v-if="routeItem.txName" />
+      <span class="inline-flex ml-1" v-if="routeItem.txName">{{ routeItem.txName }}</span>
+      <RouteAsset class="flex" :amount="routeItem"></RouteAsset>
+      <ignt-chevron-right-icon class="inline-flex text-gray-500 text-xs mr-0.5" v-if="tokenRoutes2[i+1]?.txName" />
+    </span>
+  </td>
+</tr>-->
       <tr v-for="(route, i) in tokenRoutes2.route" :key="route[0]?.denom || i" class="table-row text-xs">
         <td :key="routeItem?.denom || j" v-for="(routeItem, j) in route" class="table-cell">
           <ignt-chevron-right-icon class="inline-flex text-gray-500 mt-0.5 p-0.5 float-left mr-0.5" v-if="routeItem?.txName" />
@@ -26,9 +26,9 @@
           />
           <RouteAsset class="inline-flex float-right ml-1" :amount="routeItem" v-if="routeItem?.denom"></RouteAsset>
           <!--            <ignt-chevron-right-icon
-              class="inline-flex text-gray-500 float-right ml-1 mt-0.5 p-0.5"
-              v-if="j < route.length - 1 && route[j + 1]?.txName"
-            />-->
+            class="inline-flex text-gray-500 float-right ml-1 mt-0.5 p-0.5"
+            v-if="j < route.length - 1 && route[j + 1]?.txName"
+          />-->
         </td>
       </tr>
     </tbody>
@@ -44,13 +44,20 @@ import { envOsmosis, envSecret } from "@/env";
 import { scrtDenomOsmosis, sSCRTContractAddress, stkdSCRTContractAddress } from "@/utils/const";
 import { IgntChevronRightIcon } from "@ignt/vue-library";
 import { computed } from "vue";
+import { useStkdSecretInfo } from "@/def-composables/useStkdSecretInfo";
+
 const emit = defineEmits(["queryUpdate"]);
+const marketData = useStkdSecretInfo();
 
 const id = (i: BalanceAmount) => i;
 const stake = (b: BalanceAmount) => ({
   ...b,
   txName: "stake",
-  amount: "" + +BigNumber(b.amount).dividedBy(1.44).toFixed(6),
+  amount:
+    "" +
+    +BigNumber(b.amount)
+      .dividedBy(marketData.value?.price / 10 ** 6 || 10)
+      .toFixed(6),
   denom: "stkd-SCRT",
   stakable: false,
   chainId: envSecret.chainId,
@@ -117,13 +124,13 @@ const tokenRoutes2 = computed(() => {
     }
   ) as { ibc: any; unwrap: any; stake: any; base: any };
   const osmosisTxs = [];
-  const queries: any[] = [];
+  const queries: any[][] = [];
   let totalSCRT = BigNumber(reduce.base?.amount || 0);
   if (reduce.ibc) {
     let find = props.amounts?.find((d) => d.denom === scrtDenomOsmosis);
     totalSCRT = totalSCRT.plus(find!.amount);
     osmosisTxs.push(find, reduce.ibc);
-    queries.push(
+    queries.push([
       {
         type: "ibc",
         chainId: envOsmosis.chainId,
@@ -135,8 +142,8 @@ const tokenRoutes2 = computed(() => {
         denom: "uscrt",
         chainId: envSecret.chainId,
         amount: find!.amount,
-      }
-    );
+      },
+    ]);
   }
   let scrtTxs = [];
   let baseTxs = [];
@@ -144,7 +151,7 @@ const tokenRoutes2 = computed(() => {
     let find = props.amounts?.find((d) => d.secretAddress === sSCRTContractAddress);
     totalSCRT = totalSCRT.plus(find!.amount);
     scrtTxs.push(find, reduce.unwrap);
-    queries.push(
+    queries.push([
       {
         type: "unwrap",
         secretAddress: sSCRTContractAddress,
@@ -155,8 +162,8 @@ const tokenRoutes2 = computed(() => {
         denom: "uscrt",
         chainId: envSecret.chainId,
         amount: find!.amount,
-      }
-    );
+      },
+    ]);
   }
   if (reduce.base) {
     baseTxs.push(
@@ -205,18 +212,21 @@ const tokenRoutes2 = computed(() => {
       osmosisTxs.push(reduce.stake);
     }
   }
-  queries.push(
+  queries.push([
+    {
+      type: "balance",
+      amount: totalSCRT.toString(),
+    },
     {
       type: "stake",
-      waitAllBalance: true,
       amount: totalSCRT.toString(),
     },
     {
       type: "balance",
       denom: "stkd-SCRT",
       secretAddress: stkdSCRTContractAddress,
-    }
-  );
+    },
+  ]);
   emit("queryUpdate", queries);
   return {
     route: [osmosisTxs, baseTxs, scrtTxs].filter((d) => !!d.length).sort((a, b) => a.length - b.length),

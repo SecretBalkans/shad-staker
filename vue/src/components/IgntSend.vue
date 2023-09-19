@@ -26,7 +26,7 @@
       />
       <div class="text-xs pb-2">Route</div>
       {{ state.queries }}
-      <ScrtStakeRoute :amounts="state.tx.amounts" @queryUpdate="(newQueries) => state.queries = newQueries "/>
+      <ScrtStakeRoute :amounts="state.tx.amounts" @queryUpdate="updateStakeRouteQueries" />
 
       <div style="width: 100%; height: 24px" />
 
@@ -36,10 +36,9 @@
 
         <div v-if="isTxSuccess" class="flex items-center justify-center text-xs text-green-500 italic mt-2">Tx submitted successfully</div>
       </div>
-
     </div>
     <div>
-      <StakingInfo :withdraw="false"/>
+      <StakingInfo :withdraw="false" />
     </div>
     <!-- <div
       class="flex text-xs font-semibold items-center mt-8"
@@ -294,4 +293,8 @@ const bootstrapTxAmount = () => {
   }
 };
 bootstrapTxAmount();
+
+function updateStakeRouteQueries(newQueries: any) {
+  state.queries = newQueries;
+}
 </script>
