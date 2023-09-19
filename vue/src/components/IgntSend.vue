@@ -24,23 +24,23 @@
         :balances="balances.assets"
         @update="handleTxAmountUpdate"
       />
+      <div class="text-xs pb-2">Route</div>
+      {{ state.queries }}
+      <ScrtStakeRoute :amounts="state.tx.amounts" @queryUpdate="(newQueries) => state.queries = newQueries "/>
+
+      <div style="width: 100%; height: 24px" />
+
+      <div>
+        <IgntButton style="width: 100%" :disabled="!ableToTx" @click="sendTx" :busy="isTxOngoing">Stake </IgntButton>
+        <div v-if="isTxError" class="flex items-center justify-center text-xs text-red-500 italic mt-2">Error submitting Tx</div>
+
+        <div v-if="isTxSuccess" class="flex items-center justify-center text-xs text-green-500 italic mt-2">Tx submitted successfully</div>
+      </div>
+
     </div>
     <div>
       <StakingInfo :withdraw="false"/>
     </div>
-    <div class="text-xs pb-2">Route</div>
-    {{ state.queries }}
-    <ScrtStakeRoute :amounts="state.tx.amounts" @queryUpdate="(newQueries) => state.queries = newQueries "/>
-
-    <div style="width: 100%; height: 24px" />
-
-    <div>
-      <IgntButton style="width: 100%" :disabled="!ableToTx" @click="sendTx" :busy="isTxOngoing">Stake </IgntButton>
-      <div v-if="isTxError" class="flex items-center justify-center text-xs text-red-500 italic mt-2">Error submitting Tx</div>
-
-      <div v-if="isTxSuccess" class="flex items-center justify-center text-xs text-green-500 italic mt-2">Tx submitted successfully</div>
-    </div>
-
     <!-- <div
       class="flex text-xs font-semibold items-center mt-8"
       :class="[

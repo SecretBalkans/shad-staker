@@ -13,18 +13,18 @@
   </tr>-->
       <tr v-for="(route, i) in tokenRoutes2.route" :key="route[0]?.denom || i" class="table-row text-xs">
         <td :key="routeItem?.denom || j" v-for="(routeItem, j) in route" class="table-cell">
-          <ignt-chevron-right-icon class="inline-flex text-gray-500 mt-0.5 p-0.5 float-left mr-0.5" v-if="routeItem.txName" />
+          <ignt-chevron-right-icon class="inline-flex text-gray-500 mt-0.5 p-0.5 float-left mr-0.5" v-if="routeItem?.txName" />
           <span
-            :class="routeItem.denom ? `inline-flex ml-1 float-left` : ``"
-            :style="!routeItem.denom && { display: 'table', margin: '0 auto' }"
-            v-if="routeItem.txName"
-            >{{ routeItem.txName }}</span
+            :class="routeItem?.denom ? `inline-flex ml-1 float-left` : ``"
+            :style="!routeItem?.denom && { display: 'table', margin: '0 auto' }"
+            v-if="routeItem?.txName"
+            >{{ routeItem?.txName }}</span
           >
           <ignt-chevron-right-icon
             class="inline-flex text-gray-500 mt-0.5 p-0.5 float-left mr-0.5"
-            v-if="route[j - 1]?.txName || (routeItem.txName && routeItem.denom)"
+            v-if="route[j - 1]?.txName || (routeItem?.txName && routeItem?.denom)"
           />
-          <RouteAsset class="inline-flex float-right ml-1" :amount="routeItem" v-if="routeItem.denom"></RouteAsset>
+          <RouteAsset class="inline-flex float-right ml-1" :amount="routeItem" v-if="routeItem?.denom"></RouteAsset>
           <!--            <ignt-chevron-right-icon
               class="inline-flex text-gray-500 float-right ml-1 mt-0.5 p-0.5"
               v-if="j < route.length - 1 && route[j + 1]?.txName"
@@ -50,7 +50,7 @@ const id = (i: BalanceAmount) => i;
 const stake = (b: BalanceAmount) => ({
   ...b,
   txName: "stake",
-  amount: BigNumber(b.amount).dividedBy(1.44).toString(),
+  amount: "" + +BigNumber(b.amount).dividedBy(1.44).toFixed(6),
   denom: "stkd-SCRT",
   stakable: false,
   chainId: envSecret.chainId,
