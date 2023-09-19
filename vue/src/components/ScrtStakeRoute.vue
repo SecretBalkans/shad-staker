@@ -24,7 +24,7 @@
             class="inline-flex text-gray-500 mt-0.5 p-0.5 float-left mr-0.5"
             v-if="route[j - 1]?.txName || (routeItem?.txName && routeItem?.denom)"
           />
-          <RouteAsset class="inline-flex float-right ml-1" :amount="routeItem" v-if="routeItem?.denom"></RouteAsset>
+          <span class="inline-flex float-left ml-1"><RouteAsset :amount="routeItem" v-if="routeItem?.denom"></RouteAsset></span>
           <!--            <ignt-chevron-right-icon
             class="inline-flex text-gray-500 float-right ml-1 mt-0.5 p-0.5"
             v-if="j < route.length - 1 && route[j + 1]?.txName"
@@ -44,10 +44,8 @@ import { envOsmosis, envSecret } from "@/env";
 import { scrtDenomOsmosis, sSCRTContractAddress, stkdSCRTContractAddress } from "@/utils/const";
 import { IgntChevronRightIcon } from "@ignt/vue-library";
 import { computed } from "vue";
-import { useStkdSecretInfo } from "@/def-composables/useStkdSecretInfo";
 
 const emit = defineEmits(["queryUpdate"]);
-const marketData = useStkdSecretInfo();
 
 const id = (i: BalanceAmount) => i;
 const stake = (b: BalanceAmount) => ({
@@ -56,7 +54,7 @@ const stake = (b: BalanceAmount) => ({
   amount:
     "" +
     +BigNumber(b.amount)
-      .dividedBy(marketData.value?.price / 10 ** 6 || 10)
+      .dividedBy(+props.price / 10 ** 6 || 10)
       .toFixed(6),
   denom: "stkd-SCRT",
   stakable: false,
@@ -92,6 +90,12 @@ const routes = {
 const props = defineProps({
   amounts: {
     type: Array as PropType<Array<BalanceAmount>>,
+    required: true,
+  },
+  price: {
+    type: Number,
+    default: 0,
+    required: true,
   },
 });
 const tokenRoutes2 = computed(() => {

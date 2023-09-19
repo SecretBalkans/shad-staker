@@ -59,6 +59,7 @@
               modifier="path"
               class="text-normal opacity-70"
               :key="balance?.denom"
+              :shorten="false"
             />
           </td>
           <td :class="`text-right font-bold py-5 text-lg`">

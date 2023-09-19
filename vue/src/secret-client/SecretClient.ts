@@ -1,14 +1,11 @@
-import {MsgExecuteContract, SecretNetworkClient} from "secretjs";
+import { MsgExecuteContract, SecretNetworkClient } from "secretjs";
+import { stkdSCRTContractAddress } from "@/utils/const";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 while (!window.keplr || !window.getEnigmaUtils || !window.getOfflineSignerOnlyAmino) {
   await sleep(50);
 }
-
-const CHAIN_ID = "secret-4";
-const url = "https://secretnetwork-api.lavenderfive.com:443";
-const stkdSecretAddress = "secret1k6u0cy4feepm6pehnz804zmwakuwdapm69tuc4"
 
 // const [{ address: myAddress }] = await keplrOfflineSigner.getAccounts();
 export class SecretClient {
@@ -100,63 +97,52 @@ export class SecretClient {
     return result["balance"]["amount"];
   }
 
-  async getSktdSecretInfo(){
+  async getSktdSecretInfo() {
     const codeHash = await this.client.query.compute.codeHashByContractAddress({
-      contract_address: stkdSecretAddress,
+      contract_address: stkdSCRTContractAddress,
     }); //af74387e276be8874f07bec3a87023ee49b0e7ebe08178c49d0a49c3c98ed60e
-    console.log("Code hash: ", codeHash)
-    const time = Math.round(new Date().getTime() / 1000);
-    console.log("Time: ", time)
 
     const msgStakingInfo = () => {
       const time = Math.round(new Date().getTime() / 1000);
       return { staking_info: { time } };
     };
-    console.log("Before query")
-    console.log("msg: ", msgStakingInfo())
     const result: any = await this.querySecretContract(
-      stkdSecretAddress,
+      stkdSCRTContractAddress,
       msgStakingInfo(),
       // msgStakingInfo,
       codeHash.code_hash ? codeHash.code_hash : "0"
     );
-    console.log("Result of getStakingInfo: ", result);
     // return result
-    return result
+    return result;
   }
 
   async getStakingFees() {
     const msgFees = () => ({ fee_info: {} });
     const codeHash = await this.client.query.compute.codeHashByContractAddress({
-      contract_address: stkdSecretAddress,
+      contract_address: stkdSCRTContractAddress,
     });
-    const result: any = await this.querySecretContract(
-      stkdSecretAddress,
-      msgFees(),
-      codeHash.code_hash ? codeHash.code_hash : "0"
-    );
-    console.log("Staking Fees: ", result);
-    return result
+    const result: any = await this.querySecretContract(stkdSCRTContractAddress, msgFees(), codeHash.code_hash ? codeHash.code_hash : "0");
+    return result;
   }
 
   async getUnbonding() {
-    const viewingKey = await this.getSecretViewingKey(stkdSecretAddress);
-    const msgUnbonding = () => ({ unbonding: {
-      address: this.client.address,
-      key: viewingKey
-    } });
+    const viewingKey = await this.getSecretViewingKey(stkdSCRTContractAddress);
+    const msgUnbonding = () => ({
+      unbonding: {
+        address: this.client.address,
+        key: viewingKey,
+      },
+    });
     const codeHash = await this.client.query.compute.codeHashByContractAddress({
-      contract_address: stkdSecretAddress,
+      contract_address: stkdSCRTContractAddress,
     });
     const result: any = await this.querySecretContract(
-      stkdSecretAddress,
+      stkdSCRTContractAddress,
       msgUnbonding(),
       codeHash.code_hash ? codeHash.code_hash : "0"
     );
-    console.log("Unbondings: ", result);
-    return result
+    return result;
   }
 }
-
 
 export const useSecretClient = (address: string, signer: any, env: any) => new SecretClient(address, signer, env);

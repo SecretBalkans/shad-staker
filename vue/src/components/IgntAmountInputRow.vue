@@ -1,15 +1,16 @@
 <template>
   <div>
-    <IgntDenom :denom="amount.denom" :chain-id="amount.chainId" modifier="avatar" class="z-10" />
+    <IgntDenom :denom="amount.denom ?? ''" :chain-id="amount.chainId" modifier="avatar" class="z-10" />
     <div class="flex flex-col justify-between ml-4 z-10">
       <div class="font-semibold">
-        <IgntDenom :denom="amount.denom" :chain-id="amount.chainId" />
+        <IgntDenom :denom="amount.denom ?? ''" :chain-id="amount.chainId" />
         <IgntDenom
           :chain-id="amount?.chainId"
           :denom="amount?.denom ?? ''"
           modifier="path"
           class="text-normal opacity-50 ml-1.5"
           :key="amount?.denom"
+          :shorten="false"
         />
         <span class="float-right ml-2 pt-1 cursor-pointer">
           <IgntClearIcon @click="() => emit('remove', amount)" />

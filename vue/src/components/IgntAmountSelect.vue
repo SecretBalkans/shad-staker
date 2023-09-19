@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col">
     <IgntAmountInputRow
-      v-for="(x) in selected"
+      v-for="(x,i) in selected"
       :key="`${x.denom}`"
       :amount="x"
       class="flex justify-between items-center my-1 py-3 rounded-xl relative px-4"
@@ -12,13 +12,13 @@
       "
       @remove="
         (val) => {
-          handleTokenRemove(val);
+          handleTokenRemove(i);
         }
       "
     />
 
     <div
-      v-if="ableToBeSelected.length > 0"
+      v-if="ableToBeSelected?.length > 0"
       class="flex items-center text-xs font-medium text-gray-600 mt-2 px-2 cursor-pointer"
       @click="
         () => {
@@ -84,6 +84,7 @@
                   modifier="path"
                   class="text-normal opacity-50 ml-1.5"
                   :key="x?.denom"
+                  :shorten="false"
                 />
               </div>
 
@@ -140,7 +141,7 @@ let state: State = reactive(initialState);
 let ableToBeSelected = computed(() => {
   const notSelected = (x: BalanceAmount) =>
     (props.selected as Array<BalanceAmount>).every((y: Amount) => {
-      return x.denom.toLowerCase() !== y.denom.toLowerCase();
+      return x.denom?.toLowerCase() !== y.denom?.toLowerCase();
     });
 
   const searchFilter = (x: BalanceAmount) => {
@@ -182,8 +183,8 @@ let handleTokenSelect = (x: BalanceAmount) => {
   state.modalOpen = false;
 };
 
-let handleTokenRemove = (x: BalanceAmount) => {
-  const newSelected: Array<BalanceAmount> = (props.selected ?? []).filter((d) => d.denom.toLowerCase() !== x.denom.toLowerCase());
+let handleTokenRemove = (i: any) => {
+  const newSelected: Array<BalanceAmount> = (props.selected ?? []).filter((d, index) => i !== index);
   emit("update", newSelected);
 };
 </script>

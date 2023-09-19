@@ -24,14 +24,13 @@
         :balances="balances.assets"
         @update="handleTxAmountUpdate"
       />
-      <div class="text-xs pb-2">Route</div>
-      {{ state.queries }}
-      <ScrtStakeRoute :amounts="state.tx.amounts" @queryUpdate="updateStakeRouteQueries" />
+      <div class="text-xs pb-1 pt-5">Route</div>
+      <ScrtStakeRoute :price="+stkdSecretInfo?.price" :amounts="state.tx.amounts" @queryUpdate="updateStakeRouteQueries" />
 
       <div style="width: 100%; height: 24px" />
 
       <div>
-        <IgntButton style="width: 100%" :disabled="!ableToTx" @click="sendTx" :busy="isTxOngoing">Stake </IgntButton>
+        <IgntButton style="width: 100%" :disabled="!ableToTx" @click="sendTx" :busy="isTxOngoing">Stake</IgntButton>
         <div v-if="isTxError" class="flex items-center justify-center text-xs text-red-500 italic mt-2">Error submitting Tx</div>
 
         <div v-if="isTxSuccess" class="flex items-center justify-center text-xs text-green-500 italic mt-2">Tx submitted successfully</div>
@@ -102,7 +101,7 @@
 <script setup lang="ts">
 import { useAssets } from "@/def-composables/useAssets";
 import type { Amount, BalanceAmount } from "@/utils/interfaces";
-import { reactive } from "vue";
+import { onMounted, reactive, watch } from "vue";
 import Long from "long";
 import BigNumber from "bignumber.js";
 import { computed } from "vue";
@@ -112,6 +111,8 @@ import { useWalletStore } from "@/stores/useWalletStore";
 import { envSecret } from "@/env";
 import StakingInfo from "./StakingInfo.vue";
 import ScrtStakeRoute from "@/components/ScrtStakeRoute.vue";
+import useRouteQueries from "@/def-composables/useRouteQueries";
+import { useSecretStakingMarketData } from "@/def-composables/useSecretStakingMarketData";
 
 interface TxData {
   receiver: string;
@@ -140,7 +141,7 @@ interface State {
   tx: TxData;
   currentUIState: UI_STATE;
   advancedOpen: boolean;
-  queries: any[];
+  queries: any[][];
 }
 
 const initialState: State = {
@@ -162,6 +163,9 @@ const address = computed(() => walletStore.addresses[chainId]);
 const sendMsgSend = activeClient.value?.CosmosBankV1Beta1?.tx.sendMsgSend;
 const sendMsgTransfer = activeClient.value?.IbcApplicationsTransferV1.tx.sendMsgTransfer;
 const { balances } = useAssets();
+
+const marketData = computed(() => walletStore.secretJsClient && useSecretStakingMarketData(walletStore.secretJsClient));
+const stkdSecretInfo = computed(() => marketData.value?.stkdSecretInfo.value);
 
 const resetTx = (): void => {
   state.tx.amounts = [];
@@ -282,19 +286,26 @@ let validTxAmount = computed<boolean>(() => {
 
 let ableToTx = computed<boolean>(() => validTxAmount.value);
 const bootstrapTxAmount = () => {
-  if (hasAnyBalance.value) {
-    let firstBalance = balances.value.assets[0];
-
+  let firstBalance = balances.value.assets.find((d: any) => d.stakable && BigNumber(d.amount).isGreaterThan(0));
+  if (hasAnyBalance.value && firstBalance && !state.tx.amounts.length) {
     state.tx.amounts[0] = {
       ...firstBalance,
-      amount: "",
-      chainId: chainId,
+      amount: "0",
     };
   }
 };
-bootstrapTxAmount();
+onMounted(() => {
+  watch(
+    () => walletStore.secretJsClient && address.value && balances.value.assets,
+    (val) => {
+      if (val) {
+        bootstrapTxAmount();
+      }
+    }
+  );
+});
 
-function updateStakeRouteQueries(newQueries: any) {
-  state.queries = newQueries;
+function updateStakeRouteQueries(newQueries: any[][]) {
+  state.queries = useRouteQueries(newQueries);
 }
 </script>

@@ -12,9 +12,12 @@ export const useViewingKey = (contractAddress: string): { hasViewingKey: any; up
   byAddress[contractAddress] = {
     hasViewingKey: computed(() => hasViewingKey.value),
     updateViewingKey() {
-      walletStore.secretJsClient?.getSecretViewingKey(contractAddress).then((vk) => {
-        hasViewingKey.value = !!vk;
-      }).catch(() => {});
+      walletStore.secretJsClient
+        ?.getSecretViewingKey(contractAddress)
+        .then((vk) => {
+          hasViewingKey.value = !!vk;
+        })
+        .catch(() => {});
     },
     setViewingKey() {
       window.keplr.suggestToken(envSecret.chainId, contractAddress).then(this.updateViewingKey);
