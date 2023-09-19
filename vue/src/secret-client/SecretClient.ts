@@ -1,16 +1,7 @@
 import {MsgExecuteContract, SecretNetworkClient} from "secretjs";
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-while (!window.keplr || !window.getEnigmaUtils || !window.getOfflineSignerOnlyAmino) {
-  await sleep(50);
-}
-
-const CHAIN_ID = "secret-4";
-const url = "https://secretnetwork-api.lavenderfive.com:443";
 const stkdSecretAddress = "secret1k6u0cy4feepm6pehnz804zmwakuwdapm69tuc4"
 
-// const [{ address: myAddress }] = await keplrOfflineSigner.getAccounts();
 export class SecretClient {
   signer: any;
   client: SecretNetworkClient;

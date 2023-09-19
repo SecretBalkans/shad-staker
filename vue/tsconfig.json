@@ -13,6 +13,7 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "sourceMap": true,
+    "composite": true,
     "baseUrl": "./public",
     "types": [
       "webpack-env"
