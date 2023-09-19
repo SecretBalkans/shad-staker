@@ -256,7 +256,7 @@ const parseAmount = (amount: string): BigNumber => {
   return !amount ? new BigNumber(0) : new BigNumber(amount);
 };
 const hasAnyBalance = computed<boolean>(
-  () => !!(balances.value.assets.length && balances.value.assets.some((x) => parseAmount(x.amount ?? "0").isPositive()))
+  () => balances.value.assets.length && balances.value.assets.some((x: any) => parseAmount(x.amount ?? "0").isPositive())
 );
 const isTxOngoing = computed<boolean>(() => {
   return state.currentUIState === UI_STATE.TX_SIGNING;
@@ -278,7 +278,7 @@ let validTxAmount = computed<boolean>(() => {
         !parsedAmount.isNaN() &&
         parsedAmount.isPositive() &&
         !parsedAmount.isZero() &&
-        parsedAmount.isLessThanOrEqualTo(BigNumber(balances.value.assets.find((d) => d.denom === x.denom)?.amount || 0))
+        parsedAmount.isLessThanOrEqualTo(BigNumber(balances.value.assets.find((d: any) => d.denom === x.denom)?.amount || 0))
       );
     })
   );

@@ -156,6 +156,7 @@ let ableToBeSelected = computed(() => {
     props.balances
       ?.filter((b) => !b.gas && ((props.mode === "stake" && b.stakable) || (props.mode === "unstake" && b.unstakable)))
       .filter(notSelected)
+      .filter((b) => BigNumber(b.amount).isGreaterThan(0))
       .filter(searchFilter) ?? []
   );
 });
