@@ -17,5 +17,7 @@ COPY . .
 # build app for production with minification
 RUN yarn run build
 
+EXPOSE 4173
+
 # Start your application
 CMD [ "yarn", "preview" ]
