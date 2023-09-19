@@ -25,7 +25,7 @@
         @update="handleTxAmountUpdate"
       />
       <div class="text-xs pb-1 pt-5">Route</div>
-      <ScrtStakeRoute :price="+stkdSecretInfo?.price" :amounts="state.tx.amounts" @queryUpdate="updateStakeRouteQueries" />
+      <ScrtStakeRoute :price="+stkdSecretInfo?.price" :amounts="state.tx.amounts" :state="state.currentUIState" @queryUpdate="updateStakeRouteQueries" />
       <div style="width: 100%; height: 24px" />
 
       <div>
@@ -109,8 +109,8 @@ import { useWalletStore } from "@/stores/useWalletStore";
 import { envSecret } from "@/env";
 import StakingInfo from "./StakingInfo.vue";
 import ScrtStakeRoute from "@/components/ScrtStakeRoute.vue";
-import { useRouteQueries } from "@/def-composables/useRouteQueries";
 import { useSecretStakingMarketData } from "@/def-composables/useSecretStakingMarketData";
+import {UI_STATE} from "@/utils/interfaces";
 
 interface TxData {
   receiver: string;
@@ -118,21 +118,6 @@ interface TxData {
   amounts: Array<BalanceAmount>;
   memo: string;
   fees: Array<BalanceAmount>;
-}
-
-enum UI_STATE {
-  "FRESH" = 1,
-
-  "BOOTSTRAPED" = 2,
-
-  "WALLET_LOCKED" = 3,
-
-  "STAKE" = 100,
-  "SEND_ADD_TOKEN" = 101,
-
-  "TX_SIGNING" = 300,
-  "TX_SUCCESS" = 301,
-  "TX_ERROR" = 302,
 }
 
 interface State {

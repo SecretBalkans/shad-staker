@@ -129,3 +129,18 @@ export type AmountWithMeta = Amount & {
   coinMinimalDenom: string;
   coinDecimals: number;
 };
+
+export enum UI_STATE {
+  "FRESH" = 1,
+
+  "BOOTSTRAPED" = 2,
+
+  "WALLET_LOCKED" = 3,
+
+  "STAKE" = 100,
+  "SEND_ADD_TOKEN" = 101,
+
+  "TX_SIGNING" = 300,
+  "TX_SUCCESS" = 301,
+  "TX_ERROR" = 302,
+}
