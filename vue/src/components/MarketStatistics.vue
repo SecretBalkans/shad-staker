@@ -20,19 +20,22 @@
       </div>
       <div class="Box">
         <div style="font-weight: 600;">stkd-SCRT Market Cap</div>
-        <div>{{marketData?.price/10**6}} SCRT/stkd-SCRT</div>
+        <div>2{{ (marketData?.total_derivative_token_supply * secretPrice / 10**12).toFixed(2) }} M</div>
       </div>
       <div class="Box">
         <div style="font-weight: 600;">APY</div>
-        <div>{{marketData?.price/10**6}} SCRT/stkd-SCRT</div>
+        <div>26%</div>
       </div>
     </div>
   </div>
 </template>
 <script setup lang="ts">
 import { useStkdSecretInfo } from "@/def-composables/useStkdSecretInfo";
-
+import { useSecretPrice } from "@/def-composables/useSecretPrice"
 const marketData = useStkdSecretInfo()
+const secretPrice = useSecretPrice()
+
+
 
 </script>
 
