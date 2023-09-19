@@ -4,11 +4,15 @@ import { envOsmosis, envSecret } from "@/env";
 import { IgniteClient } from "example-client-ts/client";
 import { SecretClient, useSecretClient } from "@/secret-client/SecretClient";
 import type { Nullable } from "@/utils/interfaces";
+import { msgTypes as IbcApplicationsTransferV1MsgTypes } from "example-client-ts/ibc.applications.transfer.v1/registry";
+import { defaultRegistryTypes } from "@cosmjs/stargate";
 
 export const useWalletStore = defineStore("wallet", {
   state: () => {
     const secretClient = useClient(envSecret);
     const osmoClient = useClient(envOsmosis);
+    osmoClient.registry = [...IbcApplicationsTransferV1MsgTypes, ...defaultRegistryTypes];
+
     //secret client
     return {
       /*wallets:
@@ -115,7 +119,7 @@ export const useWalletStore = defineStore("wallet", {
                 await client.useKeplr();
                 if (client.signer) {
                   const [{ address: rawAddress }] = await client.signer.getAccounts();
-                  if (chainId == envSecret.chainId) this.secretJsClient = useSecretClient(rawAddress, client.signer, envSecret);
+                  if (chainId == envSecret.chainId) this.secretJsClient = useSecretClient(rawAddress, window.keplr.getOfflineSignerOnlyAmino(chainId), envSecret);
                   this.addresses[chainId] = rawAddress;
                   console.log(`Connected ${chainId}`);
                   // wallet.accounts.push({ address: rawAddress, pathIncrement: null });

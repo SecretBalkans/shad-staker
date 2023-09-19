@@ -12,19 +12,51 @@
   </td>
 </tr>-->
       <tr v-for="(route, i) in tokenRoutes2.route" :key="route[0]?.denom || i" class="table-row text-xs">
-        <td :key="routeItem?.denom || j" v-for="(routeItem, j) in route" class="table-cell">
-          <ignt-chevron-right-icon class="inline-flex text-gray-500 mt-0.5 p-0.5 float-left mr-0.5" v-if="routeItem?.txName" />
+        <td :key="routeItem?.denom || j" v-for="(routeItem, j) in route" :class="`table-cell p-0`">
           <span
-            :class="routeItem?.denom ? `inline-flex ml-1 float-left` : ``"
-            :style="!routeItem?.denom && { display: 'table', margin: '0 auto' }"
-            v-if="routeItem?.txName"
-            >{{ routeItem?.txName }}</span
+            :class="`inline-flex float-left ${
+              statuses[routeItem.waitId] === 'signed'
+                ? 'bg-green-300'
+                : statuses[routeItem.waitId] === 'rejected'
+                ? 'bg-red-300'
+                : statuses[routeItem.waitId] === 'signing'
+                ? 'bg-amber-200'
+                : ''
+            }`"
           >
+            <ignt-chevron-right-icon class="text-gray-500 mt-0.5 p-0.5 pr-0.5" v-if="routeItem?.txName" />
+            <span
+              :class="routeItem?.denom ? `ml-1` : ``"
+              :style="!routeItem?.denom && { display: 'table', margin: '0 auto' }"
+              v-if="routeItem?.txName"
+              >{{ routeItem.txName }}</span
+            >
+          </span>
           <ignt-chevron-right-icon
-            class="inline-flex text-gray-500 mt-0.5 p-0.5 float-left mr-0.5"
+            class="inline-flex text-gray-500 mt-0.5 p-0.5 float-left pr-0.5"
             v-if="route[j - 1]?.txName || (routeItem?.txName && routeItem?.denom)"
           />
-          <span class="inline-flex float-left ml-1"><RouteAsset :amount="routeItem" v-if="routeItem?.denom"></RouteAsset></span>
+          <span
+            :class="
+              `inline-flex float-left pl-1 ` +
+              `${
+                routeItem.txName
+                  ? statuses[routeItem?.id] === 'finished'
+                    ? 'bg-green-300'
+                    : statuses[routeItem?.id] === 'started'
+                    ? 'bg-amber-200'
+                    : ''
+                  : statuses[routeItem.id] === 'signed'
+                  ? 'bg-green-300'
+                  : statuses[routeItem.id] === 'rejected'
+                  ? 'bg-red-300'
+                  : statuses[routeItem.id] === 'signing'
+                  ? 'bg-amber-200'
+                  : ''
+              }`
+            "
+            ><RouteAsset :amount="routeItem" v-if="routeItem?.denom"></RouteAsset
+          ></span>
           <!--            <ignt-chevron-right-icon
             class="inline-flex text-gray-500 float-right ml-1 mt-0.5 p-0.5"
             v-if="j < route.length - 1 && route[j + 1]?.txName"
@@ -43,7 +75,8 @@ import BigNumber from "bignumber.js";
 import { envOsmosis, envSecret } from "@/env";
 import { scrtDenomOsmosis, sSCRTContractAddress, stkdSCRTContractAddress } from "@/utils/const";
 import { IgntChevronRightIcon } from "@ignt/vue-library";
-import { computed } from "vue";
+import { computed, ref } from "vue";
+import { useRouteQueries } from "@/def-composables/useRouteQueries";
 
 const emit = defineEmits(["queryUpdate"]);
 
@@ -80,6 +113,8 @@ const unwrap = (b: any) => ({
   stakable: true,
 });
 
+const statuses: any = ref({});
+
 const routes = {
   //scrt on osmosis
   [scrtDenomOsmosis]: [id, ibc, stake],
@@ -89,7 +124,7 @@ const routes = {
 
 const props = defineProps({
   amounts: {
-    type: Array as PropType<Array<BalanceAmount>>,
+    type: Array as PropType<Array<BalanceAmount & { id?: string }>>,
     required: true,
   },
   price: {
@@ -113,6 +148,8 @@ const tokenRoutes2 = computed(() => {
             } else {
               agg[nextStep.txName] = nextStep;
             }
+            agg[nextStep.txName].id = `${nextStep.txName}_${crypto.randomUUID()}`;
+            agg[nextStep.txName].waitId = `wait_${nextStep.txName}_${crypto.randomUUID()}`;
           }
           if (amount.denom === "uscrt") {
             agg.base = amount;
@@ -127,6 +164,12 @@ const tokenRoutes2 = computed(() => {
       stake: null,
     }
   ) as { ibc: any; unwrap: any; stake: any; base: any };
+  if (!reduce.stake) {
+    return {
+      route: [],
+    };
+  }
+
   const osmosisTxs = [];
   const queries: any[][] = [];
   let totalSCRT = BigNumber(reduce.base?.amount || 0);
@@ -134,18 +177,22 @@ const tokenRoutes2 = computed(() => {
     let find = props.amounts?.find((d) => d.denom === scrtDenomOsmosis);
     totalSCRT = totalSCRT.plus(find!.amount);
     osmosisTxs.push(find, reduce.ibc);
+    find!.id = reduce.ibc.waitId;
     queries.push([
       {
         type: "ibc",
         chainId: envOsmosis.chainId,
         denom: scrtDenomOsmosis,
         amount: find!.amount,
+        id: reduce.ibc.waitId,
       },
       {
         type: "balance",
         denom: "uscrt",
         chainId: envSecret.chainId,
         amount: find!.amount,
+        wait: 120,
+        id: reduce.ibc.id,
       },
     ]);
   }
@@ -155,51 +202,56 @@ const tokenRoutes2 = computed(() => {
     let find = props.amounts?.find((d) => d.secretAddress === sSCRTContractAddress);
     totalSCRT = totalSCRT.plus(find!.amount);
     scrtTxs.push(find, reduce.unwrap);
+    find!.id = reduce.unwrap.waitId;
     queries.push([
       {
         type: "unwrap",
+        chainId: envSecret.chainId,
         secretAddress: sSCRTContractAddress,
         amount: find!.amount,
+        id: reduce.unwrap.waitId,
       },
       {
         type: "balance",
-        denom: "uscrt",
+        denom: "sSCRT",
         chainId: envSecret.chainId,
-        amount: find!.amount,
+        id: reduce.unwrap.id,
+        wait: 30,
+        amount: `-${find!.amount}`,
       },
     ]);
   }
+
   if (reduce.base) {
-    baseTxs.push(
-      reduce.base,
-      ...(scrtTxs.length
-        ? [
-            {
-              txName: "wait",
-            },
-            {
-              denom: "uscrt",
-              amount: totalSCRT.toString(),
-              chainId: envSecret.chainId,
-            },
-            reduce.stake,
-          ]
-        : [
-            ...(osmosisTxs.length
-              ? [
-                  {
-                    txName: "wait",
-                  },
-                  {
-                    denom: "uscrt",
-                    amount: totalSCRT.toString(),
-                    chainId: envSecret.chainId,
-                  },
-                ]
-              : []),
-            reduce.stake,
-          ].filter((d) => !!d))
-    );
+    reduce.base.id = reduce.stake.waitId;
+    baseTxs.push(reduce.base);
+    if (scrtTxs.length) {
+      baseTxs.push(
+        ...[
+          {
+            txName: "wait",
+          },
+          {
+            denom: "uscrt",
+            amount: totalSCRT.toString(),
+            chainId: envSecret.chainId,
+          },
+          reduce.stake,
+        ]
+      );
+    } else if (osmosisTxs.length) {
+      baseTxs.push([
+        {
+          txName: "wait",
+        },
+        {
+          denom: "uscrt",
+          amount: totalSCRT.toString(),
+          chainId: envSecret.chainId,
+        },
+      ]);
+    }
+    baseTxs.push(reduce.stake);
   } else {
     if (scrtTxs.length) {
       scrtTxs.push(
@@ -216,25 +268,53 @@ const tokenRoutes2 = computed(() => {
       osmosisTxs.push(reduce.stake);
     }
   }
-  queries.push([
-    {
-      type: "balance",
-      amount: totalSCRT.toString(),
-    },
-    {
-      type: "stake",
-      amount: totalSCRT.toString(),
-    },
-    {
-      type: "balance",
-      denom: "stkd-SCRT",
-      secretAddress: stkdSCRTContractAddress,
-    },
-  ]);
-  emit("queryUpdate", queries);
+  queries.push(
+    [
+      osmosisTxs.length || scrtTxs.length
+        ? {
+            type: "waitAll",
+            denom: "uscrt",
+            chainId: envSecret.chainId,
+            amount: totalSCRT.toString(),
+          }
+        : null,
+      {
+        id: reduce.stake.waitId,
+        type: "stake",
+        denom: "uscrt",
+        chainId: envSecret.chainId,
+        secretAddress: stkdSCRTContractAddress,
+        amount: totalSCRT.toString(),
+      },
+      {
+        id: reduce.stake.id,
+        type: "balance",
+        denom: "stkd-SCRT",
+        status: [reduce.stake.id, "started", "finished"],
+        chainId: envSecret.chainId,
+        wait: 30,
+        secretAddress: stkdSCRTContractAddress,
+        amount: BigNumber(reduce.stake?.amount)
+          .multipliedBy(1 - 0.2 / 100 - 0.01 / 100)
+          .toString(),
+      },
+    ].filter((d) => !!d)
+  );
+  const { startQueries, events } = useRouteQueries(queries);
+  emit("queryUpdate", startQueries);
+  const route = [osmosisTxs, baseTxs, scrtTxs].filter((d) => !!d.length).sort((a, b) => a.length - b.length);
+
+  events.on("status", ({ jobId, status }) => {
+    statuses.value = {
+      ...statuses.value,
+      [jobId]: status,
+    };
+    console.log(`${status} ${jobId}`);
+  });
+
   return {
-    route: [osmosisTxs, baseTxs, scrtTxs].filter((d) => !!d.length).sort((a, b) => a.length - b.length),
-    queries,
+    route,
+    events,
   };
 });
 </script>

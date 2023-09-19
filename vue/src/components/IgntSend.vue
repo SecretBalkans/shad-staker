@@ -26,7 +26,6 @@
       />
       <div class="text-xs pb-1 pt-5">Route</div>
       <ScrtStakeRoute :price="+stkdSecretInfo?.price" :amounts="state.tx.amounts" @queryUpdate="updateStakeRouteQueries" />
-
       <div style="width: 100%; height: 24px" />
 
       <div>
@@ -100,9 +99,8 @@
 </template>
 <script setup lang="ts">
 import { useAssets } from "@/def-composables/useAssets";
-import type { Amount, BalanceAmount } from "@/utils/interfaces";
+import type { BalanceAmount } from "@/utils/interfaces";
 import { onMounted, reactive, watch } from "vue";
-import Long from "long";
 import BigNumber from "bignumber.js";
 import { computed } from "vue";
 import { IgntButton } from "@ignt/vue-library";
@@ -111,7 +109,7 @@ import { useWalletStore } from "@/stores/useWalletStore";
 import { envSecret } from "@/env";
 import StakingInfo from "./StakingInfo.vue";
 import ScrtStakeRoute from "@/components/ScrtStakeRoute.vue";
-import useRouteQueries from "@/def-composables/useRouteQueries";
+import { useRouteQueries } from "@/def-composables/useRouteQueries";
 import { useSecretStakingMarketData } from "@/def-composables/useSecretStakingMarketData";
 
 interface TxData {
@@ -141,7 +139,8 @@ interface State {
   tx: TxData;
   currentUIState: UI_STATE;
   advancedOpen: boolean;
-  queries: any[][];
+  startQueries: any;
+  executed: boolean;
 }
 
 const initialState: State = {
@@ -152,16 +151,15 @@ const initialState: State = {
     memo: "",
     fees: [],
   },
+  startQueries: null,
+  executed: false,
   currentUIState: UI_STATE.STAKE,
   advancedOpen: false,
 };
 const state = reactive(initialState);
 const walletStore = useWalletStore();
 let chainId = envSecret.chainId;
-const activeClient = computed(() => walletStore.activeClients[chainId]);
 const address = computed(() => walletStore.addresses[chainId]);
-const sendMsgSend = activeClient.value?.CosmosBankV1Beta1?.tx.sendMsgSend;
-const sendMsgTransfer = activeClient.value?.IbcApplicationsTransferV1.tx.sendMsgTransfer;
 const { balances } = useAssets();
 
 const marketData = computed(() => walletStore.secretJsClient && useSecretStakingMarketData(walletStore.secretJsClient));
@@ -173,67 +171,15 @@ const resetTx = (): void => {
   state.tx.memo = "";
   state.tx.ch = "";
   state.tx.fees = [];
-
+  state.executed = false;
   state.currentUIState = UI_STATE.STAKE;
 };
 const sendTx = async (): Promise<void> => {
   state.currentUIState = UI_STATE.TX_SIGNING;
 
-  const fee: Array<Amount> = state.tx.fees.map((x) => ({
-    denom: x.denom,
-    amount: !x.amount ? "0" : x.amount,
-  }));
-
-  const amount: Array<Amount> = state.tx.amounts.map((x) => ({
-    denom: x.denom,
-    amount: !x.amount ? "0" : x.amount,
-  }));
-
-  let memo = state.tx.memo;
-
-  let isIBC = state.tx.ch !== "";
-
-  let send;
-
-  let payload: any = {
-    amount,
-    toAddress: state.tx.receiver,
-    fromAddress: address,
-  };
-
   try {
-    if (isIBC) {
-      payload = {
-        ...payload,
-        sourcePort: "transfer",
-        sourceChannel: state.tx.ch,
-        sender: address,
-        receiver: state.tx.receiver,
-        timeoutHeight: 0,
-        timeoutTimestamp: Long.fromNumber(new Date().getTime() + 60000).multiply(1000000),
-        token: state.tx.amounts[0],
-      };
-
-      send = () =>
-        sendMsgTransfer({
-          value: payload,
-          fee: { amount: fee as Readonly<Amount>[], gas: "200000" },
-          memo,
-        });
-    } else {
-      send = () =>
-        sendMsgSend({
-          value: payload,
-          fee: { amount: fee as Readonly<Amount[]>, gas: "200000" },
-          memo,
-        });
-    }
-
-    const txResult = await send();
-
-    if (txResult.code) {
-      throw new Error();
-    }
+    const txResult = await state.startQueries();
+    console.log({ txResult });
     resetTx();
     state.currentUIState = UI_STATE.TX_SUCCESS;
     setTimeout(() => {
@@ -244,11 +190,7 @@ const sendTx = async (): Promise<void> => {
     state.currentUIState = UI_STATE.TX_ERROR;
   }
 };
-const toggleAdvanced = () => {
-  if (hasAnyBalance.value) {
-    state.advancedOpen = !state.advancedOpen;
-  }
-};
+
 const handleTxAmountUpdate = (selected: BalanceAmount[]) => {
   state.tx.amounts = selected;
 };
@@ -288,15 +230,17 @@ let ableToTx = computed<boolean>(() => validTxAmount.value);
 const bootstrapTxAmount = () => {
   let firstBalance = balances.value.assets.find((d: any) => d.stakable && BigNumber(d.amount).isGreaterThan(0));
   if (hasAnyBalance.value && firstBalance && !state.tx.amounts.length) {
+    state.executed = true;
     state.tx.amounts[0] = {
       ...firstBalance,
       amount: "0",
     };
   }
 };
+
 onMounted(() => {
   watch(
-    () => walletStore.secretJsClient && address.value && balances.value.assets,
+    () => !state.executed && walletStore.secretJsClient && address.value && balances.value.assets,
     (val) => {
       if (val) {
         bootstrapTxAmount();
@@ -305,7 +249,9 @@ onMounted(() => {
   );
 });
 
-function updateStakeRouteQueries(newQueries: any[][]) {
-  state.queries = useRouteQueries(newQueries);
+function updateStakeRouteQueries(startQueries: any) {
+  state.startQueries = startQueries;
+
 }
 </script>
+import { ref } from 'vue';

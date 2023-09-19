@@ -1,11 +1,6 @@
-import { MsgExecuteContract, SecretNetworkClient } from "secretjs";
+import { MsgExecuteContract, SecretNetworkClient, type Coin } from "secretjs";
 import { stkdSCRTContractAddress } from "@/utils/const";
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-while (!window.keplr || !window.getEnigmaUtils || !window.getOfflineSignerOnlyAmino) {
-  await sleep(50);
-}
+import type { Nullable } from "@/utils/interfaces";
 
 // const [{ address: myAddress }] = await keplrOfflineSigner.getAccounts();
 export class SecretClient {
@@ -43,26 +38,30 @@ export class SecretClient {
    * Broadcast a handle/execute tx/msg to a secret smart contract by address, wait for execution and return result.
    * @param contractAddress The address of the contract to submit a tx to
    * @param msg A JSON object that will be passed to the contract as a handle msg
-   * @param codeHash
    * @param gasPrice
    * @param gasLimit
    * @param waitForCommit
+   * @param funds
    */
   async executeSecretContract(
     contractAddress: string,
     msg: any,
-    codeHash: string,
     gasPrice = 0.015,
     gasLimit = 1700000,
-    waitForCommit = true
+    waitForCommit = true,
+    funds = null as Nullable<Coin[]>
   ) {
+    const codeHash = await this.client.query.compute.codeHashByContractAddress({
+      contract_address: contractAddress,
+    });
     return await this.client.tx.broadcast(
       [
         new MsgExecuteContract({
           contract_address: contractAddress,
-          code_hash: codeHash,
+          code_hash: codeHash.code_hash,
           sender: this.client.address,
           msg,
+          sent_funds: funds || [],
         }),
       ],
       {
