@@ -25,8 +25,23 @@
         @update="handleTxAmountUpdate"
       />
     </div>
+    <div>
+      <StakingInfo :withdraw="false"/>
+    </div>
+    <div class="text-xs pb-2">Route</div>
+    {{ state.queries }}
+    <ScrtStakeRoute :amounts="state.tx.amounts" @queryUpdate="(newQueries) => state.queries = newQueries "/>
 
-    <div
+    <div style="width: 100%; height: 24px" />
+
+    <div>
+      <IgntButton style="width: 100%" :disabled="!ableToTx" @click="sendTx" :busy="isTxOngoing">Stake </IgntButton>
+      <div v-if="isTxError" class="flex items-center justify-center text-xs text-red-500 italic mt-2">Error submitting Tx</div>
+
+      <div v-if="isTxSuccess" class="flex items-center justify-center text-xs text-green-500 italic mt-2">Tx submitted successfully</div>
+    </div>
+
+    <!-- <div
       class="flex text-xs font-semibold items-center mt-8"
       :class="[
         {
@@ -50,10 +65,13 @@
     <div v-if="state.advancedOpen && hasAnyBalance" style="width: 100%; height: 24px" />
 
     <div v-if="state.advancedOpen && hasAnyBalance" class="advanced">
-      <div class="text-xs pb-2">Route</div>
-      {{ state.queries }}
-      <ScrtStakeRoute :amounts="state.tx.amounts" @queryUpdate="(newQueries) => state.queries = newQueries "/>
-      <!--      <div class="mb-4">
+      <div class="text-xs pb-2">Fees</div>
+
+      <IgntAmountSelect class="token-selector" :selected="state.tx.fees" :balances="balances.assets" @update="handleTxFeesUpdate" />
+
+      <div class="text-xs mt-8 text-gray-600">Reference (memo)</div>
+
+      <div class="mb-4">
         <input
           v-model="state.tx.memo"
           class="mt-1 py-2 px-4 h-12 bg-gray-100 border-xs text-base leading-tight w-full rounded-xl outline-0"
@@ -69,17 +87,17 @@
           class="mt-1 py-2 px-4 h-12 bg-gray-100 border-xs text-base leading-tight w-full rounded-xl outline-0"
           placeholder="Enter a channel"
         />
-      </div>-->
+      </div>
     </div>
 
     <div style="width: 100%; height: 24px" />
 
     <div>
-      <IgntButton style="width: 100%" :disabled="!ableToTx" @click="sendTx" :busy="isTxOngoing">Stake </IgntButton>
+      <IgntButton style="width: 100%" :disabled="!ableToTx" @click="sendTx" :busy="isTxOngoing">Send </IgntButton>
       <div v-if="isTxError" class="flex items-center justify-center text-xs text-red-500 italic mt-2">Error submitting Tx</div>
 
       <div v-if="isTxSuccess" class="flex items-center justify-center text-xs text-green-500 italic mt-2">Tx submitted successfully</div>
-    </div>
+    </div> -->
   </div>
 </template>
 <script setup lang="ts">
@@ -91,9 +109,9 @@ import BigNumber from "bignumber.js";
 import { computed } from "vue";
 import { IgntButton } from "@ignt/vue-library";
 import IgntAmountSelect from "./IgntAmountSelect.vue";
-import { IgntChevronDownIcon } from "@ignt/vue-library";
 import { useWalletStore } from "@/stores/useWalletStore";
 import { envSecret } from "@/env";
+import StakingInfo from "./StakingInfo.vue";
 import ScrtStakeRoute from "@/components/ScrtStakeRoute.vue";
 
 interface TxData {

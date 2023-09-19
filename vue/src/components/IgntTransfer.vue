@@ -34,6 +34,8 @@
           </div>
         </template>
       </IgntCard>
+      <StakingInfo :withdraw="true" />
+      <Unbondings />
     </div>
   </IgntTabs>
 </template>
@@ -46,6 +48,8 @@ import IgntSend from "./IgntSend.vue";
 import { useWalletStore } from "@/stores/useWalletStore";
 import {computed} from "vue";
 import MarketStatistics from "./MarketStatistics.vue";
+import StakingInfo from "./StakingInfo.vue";
+import Unbondings from "./Unbondings.vue";
 
 const walletProvider = useWalletStore();
 const isEnabled = computed(() => !!walletProvider.secretAddress);
