@@ -51,8 +51,8 @@
 
     <div v-if="state.advancedOpen && hasAnyBalance" class="advanced">
       <div class="text-xs pb-2">Route</div>
-
-      <ScrtStakeRoute :amounts="state.tx.amounts" />
+      {{ state.queries }}
+      <ScrtStakeRoute :amounts="state.tx.amounts" @queryUpdate="(newQueries) => state.queries = newQueries "/>
       <!--      <div class="mb-4">
         <input
           v-model="state.tx.memo"
@@ -123,6 +123,7 @@ interface State {
   tx: TxData;
   currentUIState: UI_STATE;
   advancedOpen: boolean;
+  queries: any[];
 }
 
 const initialState: State = {

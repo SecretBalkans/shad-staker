@@ -1,5 +1,4 @@
 <template>
-  {{ tokenRoutes2.queries }}
   <table class="table-auto">
     <tbody>
       <!--      <tr class="text-xs">
@@ -45,12 +44,13 @@ import { envOsmosis, envSecret } from "@/env";
 import { scrtDenomOsmosis, sSCRTContractAddress, stkdSCRTContractAddress } from "@/utils/const";
 import { IgntChevronRightIcon } from "@ignt/vue-library";
 import { computed } from "vue";
+const emit = defineEmits(["queryUpdate"]);
 
 const id = (i: BalanceAmount) => i;
 const stake = (b: BalanceAmount) => ({
   ...b,
   txName: "stake",
-  amount: BigNumber(b.amount).multipliedBy(1.44).toString(),
+  amount: BigNumber(b.amount).dividedBy(1.44).toString(),
   denom: "stkd-SCRT",
   stakable: false,
   chainId: envSecret.chainId,
@@ -217,6 +217,7 @@ const tokenRoutes2 = computed(() => {
       secretAddress: stkdSCRTContractAddress,
     }
   );
+  emit("queryUpdate", queries);
   return {
     route: [osmosisTxs, baseTxs, scrtTxs].filter((d) => !!d.length).sort((a, b) => a.length - b.length),
     queries,
@@ -225,4 +226,3 @@ const tokenRoutes2 = computed(() => {
 </script>
 
 <style scoped></style>
-import { envOsmosis } from '@/env';
