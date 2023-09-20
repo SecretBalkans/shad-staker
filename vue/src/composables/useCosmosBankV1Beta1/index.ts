@@ -15,7 +15,7 @@ export default function useCosmosBankV1Beta1(
         const { address, query } = key;
         return client?.CosmosBankV1Beta1.query
           .queryBalance(address, query ?? undefined)
-          .then((res) => res.data);
+          .then((res: any) => res.data);
       },
       options
     );

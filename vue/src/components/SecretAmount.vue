@@ -2,7 +2,7 @@
   <span v-if="vk.hasViewingKey.value">
     <span v-if="Number.isNaN(Number(amount))"> Loading... </span>
     <span v-else>
-      {{ new Intl.NumberFormat("en-GB").format(Number(amount)) }}
+      {{ amount }}
     </span>
   </span>
   <ignt-button v-if="!vk.hasViewingKey.value" @click="vk.setViewingKey()">View balance</ignt-button>
