@@ -1,6 +1,6 @@
-import {MsgExecuteContract, SecretNetworkClient} from "secretjs";
-
-const stkdSecretAddress = "secret1k6u0cy4feepm6pehnz804zmwakuwdapm69tuc4"
+import { MsgExecuteContract, SecretNetworkClient, type Coin } from "secretjs";
+import { stkdSCRTContractAddress } from "@/utils/const";
+import type { Nullable } from "@/utils/interfaces";
 
 export class SecretClient {
   signer: any;
@@ -37,26 +37,30 @@ export class SecretClient {
    * Broadcast a handle/execute tx/msg to a secret smart contract by address, wait for execution and return result.
    * @param contractAddress The address of the contract to submit a tx to
    * @param msg A JSON object that will be passed to the contract as a handle msg
-   * @param codeHash
    * @param gasPrice
    * @param gasLimit
    * @param waitForCommit
+   * @param funds
    */
   async executeSecretContract(
     contractAddress: string,
     msg: any,
-    codeHash: string,
     gasPrice = 0.015,
     gasLimit = 1700000,
-    waitForCommit = true
+    waitForCommit = true,
+    funds = null as Nullable<Coin[]>
   ) {
+    const codeHash = await this.client.query.compute.codeHashByContractAddress({
+      contract_address: contractAddress,
+    });
     return await this.client.tx.broadcast(
       [
         new MsgExecuteContract({
           contract_address: contractAddress,
-          code_hash: codeHash,
+          code_hash: codeHash.code_hash,
           sender: this.client.address,
           msg,
+          sent_funds: funds || [],
         }),
       ],
       {
@@ -91,63 +95,52 @@ export class SecretClient {
     return result["balance"]["amount"];
   }
 
-  async getSktdSecretInfo(){
+  async getSktdSecretInfo() {
     const codeHash = await this.client.query.compute.codeHashByContractAddress({
-      contract_address: stkdSecretAddress,
+      contract_address: stkdSCRTContractAddress,
     }); //af74387e276be8874f07bec3a87023ee49b0e7ebe08178c49d0a49c3c98ed60e
-    console.log("Code hash: ", codeHash)
-    const time = Math.round(new Date().getTime() / 1000);
-    console.log("Time: ", time)
 
     const msgStakingInfo = () => {
       const time = Math.round(new Date().getTime() / 1000);
       return { staking_info: { time } };
     };
-    console.log("Before query")
-    console.log("msg: ", msgStakingInfo())
     const result: any = await this.querySecretContract(
-      stkdSecretAddress,
+      stkdSCRTContractAddress,
       msgStakingInfo(),
       // msgStakingInfo,
       codeHash.code_hash ? codeHash.code_hash : "0"
     );
-    console.log("Result of getStakingInfo: ", result);
     // return result
-    return result
+    return result;
   }
 
   async getStakingFees() {
     const msgFees = () => ({ fee_info: {} });
     const codeHash = await this.client.query.compute.codeHashByContractAddress({
-      contract_address: stkdSecretAddress,
+      contract_address: stkdSCRTContractAddress,
     });
-    const result: any = await this.querySecretContract(
-      stkdSecretAddress,
-      msgFees(),
-      codeHash.code_hash ? codeHash.code_hash : "0"
-    );
-    console.log("Staking Fees: ", result);
-    return result
+    const result: any = await this.querySecretContract(stkdSCRTContractAddress, msgFees(), codeHash.code_hash ? codeHash.code_hash : "0");
+    return result;
   }
 
   async getUnbonding() {
-    const viewingKey = await this.getSecretViewingKey(stkdSecretAddress);
-    const msgUnbonding = () => ({ unbonding: {
-      address: this.client.address,
-      key: viewingKey
-    } });
+    const viewingKey = await this.getSecretViewingKey(stkdSCRTContractAddress);
+    const msgUnbonding = () => ({
+      unbonding: {
+        address: this.client.address,
+        key: viewingKey,
+      },
+    });
     const codeHash = await this.client.query.compute.codeHashByContractAddress({
-      contract_address: stkdSecretAddress,
+      contract_address: stkdSCRTContractAddress,
     });
     const result: any = await this.querySecretContract(
-      stkdSecretAddress,
+      stkdSCRTContractAddress,
       msgUnbonding(),
       codeHash.code_hash ? codeHash.code_hash : "0"
     );
-    console.log("Unbondings: ", result);
-    return result
+    return result;
   }
 }
-
 
 export const useSecretClient = (address: string, signer: any, env: any) => new SecretClient(address, signer, env);
