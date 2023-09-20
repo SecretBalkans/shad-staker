@@ -79,7 +79,7 @@
     </div>
     <div
       v-else-if="showSettings"
-      class="top-20 right-8 shadow-std bg-white rounded absolute max-w-xs p-7 z-50 w-full box-border acc-dd"
+      class="top-20 right-8 shadow-std bg-white-1000 rounded absolute max-w-xl p-7 z-50 w-full box-border acc-dd"
     >
       <header class="flex items-center -mx-7 -mt-7 px-3 pt-3 pb-7">
         <div class="cursor-pointer" @click="switchToDefault">
@@ -100,7 +100,40 @@
           </svg>
         </div>
         <div class="text-xl font-semibold text-center flex-1">Settings</div>
+        <!-- tabs -->
       </header>
+      <div>
+        <IgntTabs
+          :tabHeaderClasses="[
+            'text-xl',
+            'font-semibold',
+            'p-0',
+            'm-0',
+            'mb-2.5',
+            'flex-1',
+          ]"
+          :tabLinkClasses="['pr-4']"
+          :inactiveLinkClasses="['text-gray-400']"
+          :activeLinkClasses="['text-black']"
+        >
+          <div class="" tabTitle="Secret">
+            <div>
+              rpc url: <input :value="secretRpc" class="border-2" type="text"/> <button :onclick="saveToLocalStorage('secretRpc', secretRpc)" class="rounded pr-2 pl-2 bg-red-200">edit</button>
+            </div>
+            <div>
+              lcd url: <input :value="envSecret.apiURL" class="border-2" type="text"/> <button class="rounded pr-2 pl-2 bg-red-200">edit</button>
+            </div>
+          </div>
+          <div class="" tabTitle="Osmosis">
+            <div>
+              rpc url: <input :value="envOsmosis.rpcURL" class="border-2" type="text"/> <button class="rounded pr-2 pl-2 bg-red-200">edit</button>
+            </div>
+            <div>
+              lcd url: <input :value="envOsmosis.apiURL" class="border-2" type="text"/> <button class="rounded pr-2 pl-2 bg-red-200">edit</button>
+            </div>
+          </div>
+        </IgntTabs>
+      </div>
 <!--
       <div class="flex justify-between items-center mb-3">
         <span> Chain </span>
@@ -133,11 +166,12 @@
 // import { useConnectionStatus } from "@/def-composables/useConnectionStatus";
 import { computed, onBeforeUnmount, onMounted, reactive } from "vue";
 import { useClipboard } from "@/def-composables/useClipboard";
-import { IgntChevronRightIcon } from "@ignt/vue-library";
+import { IgntChevronRightIcon, IgntTabs } from "@ignt/vue-library";
 import { IgntExternalArrowIcon } from "@ignt/vue-library";
 import { IgntProfileIcon } from "@ignt/vue-library";
 import { IgntCopyIcon } from "@ignt/vue-library";
 import { useWalletStore } from "@/stores/useWalletStore";
+import { envOsmosis, envSecret } from "@/env";
 
 enum UI_STATE {
   "DEFAULT" = 1,
@@ -201,6 +235,24 @@ let switchToSettings = () => {
 let switchToDefault = () => {
   state.currentUIState = UI_STATE.DEFAULT;
 };
+
+
+const rpcCheck = async (rpc: string) => {
+  try {
+    await fetch(rpc);
+    return true
+  } catch (e) {
+    console.error(e);
+    return false
+  };
+}
+const saveToLocalStorage = async (key: string, value: string) => {
+  if (await rpcCheck(value)){
+    console.log("Saving to the storage...")
+    localStorage.setItem(key, JSON.stringify(value));
+  }
+}
+let secretRpc = envSecret.rpcURL
 
 // lh
 onMounted(() => {
