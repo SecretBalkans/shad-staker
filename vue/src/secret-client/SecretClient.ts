@@ -2,7 +2,6 @@ import { MsgExecuteContract, SecretNetworkClient, type Coin } from "secretjs";
 import { stkdSCRTContractAddress } from "@/utils/const";
 import type { Nullable } from "@/utils/interfaces";
 
-// const [{ address: myAddress }] = await keplrOfflineSigner.getAccounts();
 export class SecretClient {
   signer: any;
   client: SecretNetworkClient;

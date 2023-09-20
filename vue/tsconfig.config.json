@@ -4,6 +4,7 @@
   "compilerOptions": {
     "moduleResolution": "Node",
     "noImplicitAny": false,
+    "composite": true,
     "types": ["node","crypto-js", "qrcode", "events"]
   }
 }

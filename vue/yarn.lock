@@ -1770,6 +1770,11 @@
   resolved "https://registry.npmjs.org/@types/trusted-types/-/trusted-types-2.0.3.tgz"
   integrity sha512-NfQ4gyz38SL8sDNrSixxU2Os1a5xcdFxipAFxYEuLUlvU2uDwS4NUpsImcf1//SlWItCVMMLiylsxbmNMToV/g==
 
+"@types/webpack-env@^1.18.1":
+  version "1.18.1"
+  resolved "https://registry.npmjs.org/@types/webpack-env/-/webpack-env-1.18.1.tgz"
+  integrity sha512-D0HJET2/UY6k9L6y3f5BL+IDxZmPkYmPT4+qBrRdmRLYRuV0qNKizMgTvYxXZYn+36zjPeoDZAEYBCM6XB+gww==
+
 "@typescript-eslint/eslint-plugin@^5.0.0":
   version "5.41.0"
   resolved "https://registry.npmjs.org/@typescript-eslint/eslint-plugin/-/eslint-plugin-5.41.0.tgz"
@@ -3088,8 +3093,10 @@ events@^3.3.0:
   resolved "https://registry.npmjs.org/events/-/events-3.3.0.tgz"
   integrity sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q==
 
-"example-client-ts@file:../ts-client":
+example-client-ts@0.0.1:
   version "0.0.1"
+  resolved "https://registry.yarnpkg.com/example-client-ts/-/example-client-ts-0.0.1.tgz#9361dedcb60a28a3a786bd41748a8f7cded1f0c5"
+  integrity sha512-UcZMWKbBwz1sTvyDUY7T0FMBuL0/08lJXszGfW51VFOTXngS9QD3d4EJtiTo3yd8AV9ftmSiMUhn98t+mVvYkA==
   dependencies:
     "@cosmjs/launchpad" "0.27.0"
     "@cosmjs/proto-signing" "0.27.0"
