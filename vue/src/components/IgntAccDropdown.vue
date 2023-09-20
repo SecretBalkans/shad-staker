@@ -118,7 +118,7 @@
         >
           <div class="" tabTitle="Secret">
             <div>
-              rpc url: <input :value="secretRpc" class="border-2" type="text"/> <button :onclick="saveToLocalStorage('secretRpc', secretRpc)" class="rounded pr-2 pl-2 bg-red-200">edit</button>
+              rpc url: <input v-model="secretRpc" class="border-2" type="text"/> <button @click="saveToLocalStorage('secretRpc', secretRpc)" class="rounded pr-2 pl-2 bg-red-200">edit</button>
             </div>
             <div>
               lcd url: <input :value="envSecret.apiURL" class="border-2" type="text"/> <button class="rounded pr-2 pl-2 bg-red-200">edit</button>
@@ -164,7 +164,7 @@
 <script setup lang="ts">
 // import useCosmosBaseTendermintV1Beta1 from "@/composables/useCosmosBaseTendermintV1Beta1";
 // import { useConnectionStatus } from "@/def-composables/useConnectionStatus";
-import { computed, onBeforeUnmount, onMounted, reactive } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useClipboard } from "@/def-composables/useClipboard";
 import { IgntChevronRightIcon, IgntTabs } from "@ignt/vue-library";
 import { IgntExternalArrowIcon } from "@ignt/vue-library";
@@ -172,6 +172,8 @@ import { IgntProfileIcon } from "@ignt/vue-library";
 import { IgntCopyIcon } from "@ignt/vue-library";
 import { useWalletStore } from "@/stores/useWalletStore";
 import { envOsmosis, envSecret } from "@/env";
+import useCosmosBaseTendermintV1Beta1 from "@/composables/useCosmosBaseTendermintV1Beta1";
+import { useClient } from "@/composables/useClient";
 
 enum UI_STATE {
   "DEFAULT" = 1,
@@ -236,7 +238,13 @@ let switchToDefault = () => {
   state.currentUIState = UI_STATE.DEFAULT;
 };
 
-
+const apiCheck = async (url: any) => {
+  const newEnv = envSecret //change the env..
+  const client = useClient()
+  const query = useCosmosBaseTendermintV1Beta1(client);
+  const nodeInfo = query.ServiceGetNodeInfo();
+  const apiConnected = computed(() => !nodeInfo.error.value);
+}
 const rpcCheck = async (rpc: string) => {
   try {
     await fetch(rpc);
@@ -248,11 +256,13 @@ const rpcCheck = async (rpc: string) => {
 }
 const saveToLocalStorage = async (key: string, value: string) => {
   if (await rpcCheck(value)){
+    console.log("Value: ", value)
     console.log("Saving to the storage...")
     localStorage.setItem(key, JSON.stringify(value));
+    document.location.reload()
   }
 }
-let secretRpc = envSecret.rpcURL
+let secretRpc = ref(envSecret.rpcURL)
 
 // lh
 onMounted(() => {
