@@ -7,11 +7,11 @@ export const useSecretPrice = () => {
     const stkdSecretInfoQuery = computed(() =>
         computedStkdSecretInfo.value?.QuerySecretPrice(
             {
-            enabled: true,
-            staleTime: 12000,
-            refetchInterval: 12000,
-            refetchIntervalInBackground: false,
-            refetchOnWindowFocus: true,
+                enabled: true,
+                staleTime: 12000,
+                refetchInterval: 12000,
+                refetchIntervalInBackground: false,
+                refetchOnWindowFocus: true,
             }
         )
     );

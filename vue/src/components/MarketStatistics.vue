@@ -20,11 +20,11 @@
       </div>
       <div class="Box">
         <div style="font-weight: 600">stkd-SCRT Market Cap</div>
-        <div>{{ stkdSecretInfo?.price / 10 ** 6 }} SCRT/stkd-SCRT</div>
+        <div>{{ (stkdSecretPrice * stkdSecretInfo?.total_derivative_token_supply / 10 ** 12).toFixed(2) }} M</div>
       </div>
       <div class="Box">
         <div style="font-weight: 600">APY</div>
-        <div>{{ stkdSecretInfo?.price / 10 ** 6 }} SCRT/stkd-SCRT</div>
+        <div>~26%</div>
       </div>
     </div>
   </div>
@@ -32,11 +32,14 @@
 <script setup lang="ts">
 
 import { useSecretStakingMarketData } from "@/def-composables/useSecretStakingMarketData";
+import { useSecretPrice } from "@/def-composables/useSecretPrice";
 import { useWalletStore } from "@/stores/useWalletStore";
 import { computed } from "vue";
 const walletStore = useWalletStore();
 const marketData = computed(() => walletStore.secretJsClient && useSecretStakingMarketData(walletStore.secretJsClient));
 const stkdSecretInfo = computed(() => marketData.value?.stkdSecretInfo.value);
+const secretPrice = computed(() => useSecretPrice())
+const stkdSecretPrice = secretPrice?.value
 
 </script>
 
