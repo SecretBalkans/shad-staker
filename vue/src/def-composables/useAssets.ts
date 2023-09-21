@@ -113,6 +113,7 @@ const useAssetsInstance = () => {
           amount: x.amount,
           chainId: envSecret.chainId,
           stakable: true,
+          icon: "secret-scrt-logo.png"
         })) as BalanceAmount[]
       )
         .concat(
@@ -121,6 +122,7 @@ const useAssetsInstance = () => {
             amount: x.amount,
             chainId: envOsmosis.chainId,
             stakable: true,
+            icon: "secret-scrt-logo.png"
           })) as BalanceAmount[]
         )
         .concat([
@@ -130,6 +132,7 @@ const useAssetsInstance = () => {
             secretAddress: stkdSCRTContractAddress,
             chainId: envSecret.chainId,
             unstakable: true,
+            icon: "stkd-scrt-logo.svg"
           },
           {
             denom: "sSCRT",
@@ -137,6 +140,7 @@ const useAssetsInstance = () => {
             chainId: envSecret.chainId,
             secretAddress: sSCRTContractAddress,
             stakable: true,
+            icon: "sSCRT.svg"
           },
         ] as BalanceAmount[])
         .concat(
@@ -145,6 +149,7 @@ const useAssetsInstance = () => {
             amount: x.amount,
             chainId: envOsmosis.chainId,
             gas: true,
+            icon: "osmosis-osmo-logo.png"
           })) as BalanceAmount[]
         )
         .map((d) => ({

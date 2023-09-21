@@ -1,37 +1,27 @@
 <template>
   <div>
-    <IgntDenom :denom="amount.denom ?? ''" :chain-id="amount.chainId" modifier="avatar" class="z-10" />
+    <IgntDenom :icon="amount.icon" :denom="amount.denom ?? ''" :chain-id="amount.chainId" modifier="avatar"
+      class="z-10" />
     <div class="flex flex-col justify-between ml-4 z-10">
       <div class="font-semibold">
         <IgntDenom :denom="amount.denom ?? ''" :chain-id="amount.chainId" />
-        <IgntDenom
-          :chain-id="amount?.chainId"
-          :denom="amount?.denom ?? ''"
-          modifier="path"
-          class="text-normal opacity-50 ml-1.5"
-          :key="amount?.denom"
-          :shorten="false"
-        />
+        <IgntDenom :chain-id="amount?.chainId" :denom="amount?.denom ?? ''" modifier="path"
+          class="text-normal opacity-50 ml-1.5" :key="amount?.denom" :shorten="false" />
         <span class="float-right ml-2 pt-1 cursor-pointer">
           <IgntClearIcon @click="() => emit('remove', amount)" />
         </span>
       </div>
-      <div
-        class="text-xs"
-        :class="{
-          error: !hasEnoughBalance,
-        }"
-      >
+      <div class="text-xs" :class="{
+        error: !hasEnoughBalance,
+      }">
         {{ balanceAvailable ?? 0 }} available
       </div>
     </div>
 
     <div class="flex-1 w-full h-full">
-      <IgntAmountInput
-        :max-decimals="6"
+      <IgntAmountInput :max-decimals="6"
         class="absolute w-full left-0 text-right h-full top-0 outline-0 focus:bg-gray-100 text-3xl font-medium rounded-lg px-4"
-        @update="handleChange"
-      />
+        @update="handleChange" />
       <div class="focus-background"></div>
     </div>
   </div>

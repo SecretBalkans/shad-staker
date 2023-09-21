@@ -1,17 +1,15 @@
 <template>
   <header class="flex p-5">
-    <IgntLogo class="mx-2.5" />
+    <img src="ShadShade.png" style="width: 150px; margin-top: -30px;" alt="Logo">
     <nav class="flex flex-1 justify-between">
       <ul class="flex items-center">
-        <li
-          class="text-3 px-4 font-normal"
-          v-for="item in navItems"
-          :key="item.label"
-        >
+        <!-- <li class="text-3 px-4 font-normal" v-for="item in navItems" :key="item.label">
           <IgntLink :item="item"></IgntLink>
-        </li>
+        </li> -->
       </ul>
-      <div><IgntAcc /></div>
+      <div>
+        <IgntAcc />
+      </div>
     </nav>
   </header>
 </template>

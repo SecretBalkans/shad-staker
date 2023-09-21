@@ -2,22 +2,17 @@
   <section>
     <header class="flex items-center justify-between">
       <h2 class="text-3xl text-black font-semibold p-0 m-0 mb-2.5 flex-1">Assets</h2>
-      <div v-if="isConnected && balances.assets.length && !balances.isLoading" class="flex items-center justify-end mb-2.5">
+      <div v-if="isConnected && balances.assets.length && !balances.isLoading"
+        class="flex items-center justify-end mb-2.5">
         <div class="z-50">
           <IgntSearchIcon />
         </div>
-        <input
-          ref="searchInput"
-          v-model="searchQuery"
-          type="search"
-          autocomplete="off"
-          placeholder="Search assets"
+        <input ref="searchInput" v-model="searchQuery" type="search" autocomplete="off" placeholder="Search assets"
           class="w-48 -ml-8 pl-10 pr-10 leading-12 h-12 appearance-none outline-none border-none rounded-xl focus:shadow-outline"
           @input="(evt: Event) => {
             resetDisplayLimit();
             return evt;
-          }"
-        />
+          }" />
         <div v-if="searchQuery" class="z-50 absolute mr-4" @click.prevent="resetSearch">
           <IgntClearIcon />
         </div>
@@ -32,35 +27,21 @@
         </tr>
       </thead>
       <tbody>
-        <tr
-          v-for="(balance, index) in filteredBalanceList.slice(0, displayLimit)"
-          :key="index"
-          :style="{
-            borderTop: `${balance?.gas ? 'solid lightgray 0.5px' : ''}`,
-          }"
-          :class="`py-2 ${balance?.gas ? 'text-gray-600' : 'text-black'}`"
-        >
+        <tr v-for="(balance, index) in filteredBalanceList.slice(0, displayLimit)" :key="index" :style="{
+          borderTop: `${balance?.gas ? 'solid lightgray 0.5px' : ''}`,
+        }" :class="`py-2 ${balance?.gas ? 'text-gray-600' : 'text-black'}`">
           <td class="flex items-center py-5 font-semibold">
-            <IgntDenom :denom="balance?.denom ?? ''" :chain-id="balance?.chainId" modifier="avatar" class="mr-6" :key="balance?.denom" />
-            <IgntDenom
-              :chain-id="balance?.chainId"
-              :denom="balance?.denom ?? ''"
-              :key="balance?.denom"
-              :is-secret="!!balance?.secretAddress"
-            />
+            <IgntDenom :icon="balance?.icon" :denom="balance?.denom ?? ''" :chain-id="balance?.chainId" modifier="avatar"
+              class="mr-6" :key="balance?.denom" />
+            <IgntDenom :chain-id="balance?.chainId" :denom="balance?.denom ?? ''" :key="balance?.denom"
+              :is-secret="!!balance?.secretAddress" />
             <div v-if="balance?.gas" class="ml-2" :title="`Only used for gas`">
               <IgntWarningIcon />
             </div>
           </td>
           <td>
-            <IgntDenom
-              :chain-id="balance?.chainId"
-              :denom="balance?.denom ?? ''"
-              modifier="path"
-              class="text-normal opacity-70"
-              :key="balance?.denom"
-              :shorten="false"
-            />
+            <IgntDenom :chain-id="balance?.chainId" :denom="balance?.denom ?? ''" modifier="path"
+              class="text-normal opacity-70" :key="balance?.denom" :shorten="false" />
           </td>
           <td :class="`text-right font-bold py-5 text-lg`">
             <span v-if="balance?.secretAddress">
@@ -91,10 +72,8 @@
         <span class="sr-only">Loading...</span>
       </div>
     </template>
-    <div
-      v-if="isConnected && !balances.isLoading && !balances.assets.length"
-      class="text-left text-black opacity-75 text-md font-normal py-8"
-    >
+    <div v-if="isConnected && !balances.isLoading && !balances.assets.length"
+      class="text-left text-black opacity-75 text-md font-normal py-8">
       You have no assets
     </div>
     <div v-if="!isConnected" class="text-left text-black opacity-75 text-md font-normal py-8">You need to connect</div>
@@ -169,6 +148,7 @@ const { searchQuery, displayLimit, searchInput } = toRefs(state.value);
 
 <style lang="scss" scoped>
 input[type="search"] {
+
   &::-webkit-search-decoration,
   &::-webkit-search-cancel-button,
   &::-webkit-search-results-button,

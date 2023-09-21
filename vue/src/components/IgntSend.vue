@@ -17,22 +17,19 @@
       </div>-->
     </div>
     <div v-if="hasAnyBalance">
-      <IgntAmountSelect
-        :mode="'stake'"
-        class="token-selector--main"
-        :selected="state.tx.amounts"
-        :balances="balances.assets"
-        @update="handleTxAmountUpdate"
-      />
+      <IgntAmountSelect :mode="'stake'" class="token-selector--main" :selected="state.tx.amounts"
+        :balances="balances.assets" @update="handleTxAmountUpdate" />
       <div class="text-xs pb-1 pt-5">Route</div>
-      <ScrtStakeRoute :price="+stkdSecretInfo?.price" :amounts="state.tx.amounts" :state="state.currentUIState" @queryUpdate="updateStakeRouteQueries" />
-      <div style="width: 100%; height: 24px" />
+      <ScrtStakeRoute :price="+stkdSecretInfo?.price" :amounts="state.tx.amounts" :state="state.currentUIState"
+        @queryUpdate="updateStakeRouteQueries" />
 
       <div>
         <IgntButton style="width: 100%" :disabled="!ableToTx" @click="sendTx" :busy="isTxOngoing">Stake</IgntButton>
-        <div v-if="isTxError" class="flex items-center justify-center text-xs text-red-500 italic mt-2">Error submitting Tx</div>
+        <div v-if="isTxError" class="flex items-center justify-center text-xs text-red-500 italic mt-2">Error submitting
+          Tx</div>
 
-        <div v-if="isTxSuccess" class="flex items-center justify-center text-xs text-green-500 italic mt-2">Tx submitted successfully</div>
+        <div v-if="isTxSuccess" class="flex items-center justify-center text-xs text-green-500 italic mt-2">Tx submitted
+          successfully</div>
       </div>
     </div>
     <div>
@@ -110,7 +107,7 @@ import { envSecret } from "@/env";
 import StakingInfo from "./StakingInfo.vue";
 import ScrtStakeRoute from "@/components/ScrtStakeRoute.vue";
 import { useSecretStakingMarketData } from "@/def-composables/useSecretStakingMarketData";
-import {UI_STATE} from "@/utils/interfaces";
+import { UI_STATE } from "@/utils/interfaces";
 
 interface TxData {
   receiver: string;
@@ -239,4 +236,3 @@ function updateStakeRouteQueries(startQueries: any) {
 
 }
 </script>
-import { ref } from 'vue';

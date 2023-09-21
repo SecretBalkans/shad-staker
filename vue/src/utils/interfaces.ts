@@ -11,6 +11,7 @@ export type BalanceAmount = {
   gas?: boolean;
   stakable?: boolean;
   unstakable?: boolean;
+  icon?: string;
 };
 export type Amount = {
   amount: string;

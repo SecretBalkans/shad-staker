@@ -141,6 +141,30 @@ export class SecretClient {
     );
     return result;
   }
+
+  async executeStkdSecretWithdraw(amount: string) {
+    const msgUnbond = (amount: string) => ({
+      unbond: {
+        redeem_amount: amount,
+      },
+    });
+    const result = await this.executeSecretContract(
+      stkdSCRTContractAddress,
+      msgUnbond(amount)
+    )
+    return result
+  }
+
+  async executeStkdSecretClaim() {
+    const msgClaim = () => ({
+      claim: {}
+    });
+    const result = await this.executeSecretContract(
+      stkdSCRTContractAddress,
+      msgClaim()
+    )
+    return result
+  }
 }
 
 export const useSecretClient = (address: string, signer: any, env: any) => new SecretClient(address, signer, env);

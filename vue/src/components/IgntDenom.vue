@@ -9,7 +9,7 @@
     </span>-->
   </span>
   <div v-else-if="modifier === 'avatar'" :class="[sizeClassObject, 'token-avatar']" :title="denom">
-    {{ short?.slice(0, 1) }}
+    <img :src="icon" alt="...">
   </div>
 </template>
 
@@ -57,6 +57,9 @@ const props = defineProps({
     type: Boolean as PropType<boolean>,
     default: true,
   },
+  icon: {
+    type: String as PropType<string>
+  }
 });
 const denom = computed(() => props.denom && (props.isSecret ? props.denom : useDenom(props.denom, props.chainId).normalized.value));
 // computed
@@ -112,10 +115,12 @@ const sizeClassObject = computed(() => {
     width: 24px;
     height: 24px;
   }
+
   &--medium {
     width: 32px;
     height: 32px;
   }
+
   &--large {
     width: 40px;
     height: 40px;
