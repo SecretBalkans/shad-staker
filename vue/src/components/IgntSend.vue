@@ -25,7 +25,18 @@
         @update="handleTxAmountUpdate"
       />
       <div class="text-xs pb-1 pt-5">Route</div>
-      <ScrtStakeRoute :price="+stkdSecretInfo?.price" :amounts="state.tx.amounts" :state="state.currentUIState" @queryUpdate="updateStakeRouteQueries" />
+      <ScrtStakeRoute
+        :price="+stkdSecretInfo?.price"
+        :amounts="state.tx.amounts"
+        :state="state.currentUIState"
+        @queryUpdate="updateStakeRouteQueries"
+        @tasks="
+          ({ tasks, events }) => {
+            state.tasks = tasks;
+            state.events = events;
+          }
+        "
+      />
       <div style="width: 100%; height: 24px" />
 
       <div>
@@ -99,7 +110,7 @@
 </template>
 <script setup lang="ts">
 import { useAssets } from "@/def-composables/useAssets";
-import type { BalanceAmount } from "@/utils/interfaces";
+import type { BalanceAmount, Nullable } from "@/utils/interfaces";
 import { onMounted, reactive, watch } from "vue";
 import BigNumber from "bignumber.js";
 import { computed } from "vue";
@@ -110,7 +121,10 @@ import { envSecret } from "@/env";
 import StakingInfo from "./StakingInfo.vue";
 import ScrtStakeRoute from "@/components/ScrtStakeRoute.vue";
 import { useSecretStakingMarketData } from "@/def-composables/useSecretStakingMarketData";
-import {UI_STATE} from "@/utils/interfaces";
+import { UI_STATE } from "@/utils/interfaces";
+import { useStakeFSM } from "@/def-composables/state/useStakeFSM";
+import { interpret } from "xstate";
+import { EventEmitter } from "events";
 
 interface TxData {
   receiver: string;
@@ -126,6 +140,8 @@ interface State {
   advancedOpen: boolean;
   startQueries: any;
   executed: boolean;
+  tasks: any;
+  events: Nullable<EventEmitter>;
 }
 
 const initialState: State = {
@@ -138,6 +154,8 @@ const initialState: State = {
   },
   startQueries: null,
   executed: false,
+  tasks: null,
+  events: null,
   currentUIState: UI_STATE.STAKE,
   advancedOpen: false,
 };
@@ -157,13 +175,25 @@ const resetTx = (): void => {
   state.tx.ch = "";
   state.tx.fees = [];
   state.executed = false;
+  state.tasks = null;
+  state.events = null;
   state.currentUIState = UI_STATE.STAKE;
 };
 const sendTx = async (): Promise<void> => {
   state.currentUIState = UI_STATE.TX_SIGNING;
-
   try {
-    const txResult = await state.startQueries();
+    const machine = useStakeFSM(state.tasks, state.events!);
+
+    const service = interpret(machine);
+    const txResult = await new Promise((resolve, reject) => {
+      const subscription = service.subscribe((state: any) => {});
+      service.onTransition((d) => console.log("Transition", d.changed, d.value));
+      service.start();
+      service.send("START");
+    });
+
+    // service.start();
+    // const txResult = await ;
     console.log({ txResult });
     resetTx();
     state.currentUIState = UI_STATE.TX_SUCCESS;
@@ -236,7 +266,6 @@ onMounted(() => {
 
 function updateStakeRouteQueries(startQueries: any) {
   state.startQueries = startQueries;
-
 }
 </script>
 import { ref } from 'vue';

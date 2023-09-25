@@ -67,41 +67,65 @@ import { envOsmosis, envSecret } from "@/env";
 import { scrtDenomOsmosis, sSCRTContractAddress, stkdSCRTContractAddress } from "@/utils/const";
 import { IgntChevronRightIcon } from "@ignt/vue-library";
 import { ref, watch } from "vue";
-import { useRouteQueries } from "@/def-composables/useRouteQueries";
+import { EventEmitter } from "events";
 
-const emit = defineEmits(["queryUpdate"]);
+const emit = defineEmits(["tasks"]);
 
 const id = (i: BalanceAmount) => i;
-const stake = (b: BalanceAmount) => ({
-  ...b,
-  txName: "stake",
-  amount:
+const stake = (b: BalanceAmount) => {
+  const stkdSCRTRawPrice =
     "" +
     +BigNumber(b.amount)
       .dividedBy(+props.price / 10 ** 6 || 10)
-      .toFixed(6),
-  denom: "stkd-SCRT",
-  stakable: false,
-  chainId: envSecret.chainId,
-  unstakable: true,
-  secretAddress: stkdSCRTContractAddress,
-});
+      .toFixed(6);
+  const stkdSCRTExpected = BigNumber(stkdSCRTRawPrice)
+    .multipliedBy(1 - 0.2 / 100 - 0.01 / 100)
+    .toString();
+  return {
+    ...b,
+    txName: "stake",
+    amount: b.amount,
+    denom: "stkd-SCRT",
+    stakable: false,
+    chainId: envSecret.chainId,
+    unstakable: true,
+    secretAddress: stkdSCRTContractAddress,
+    wait: {
+      denom: "stkd-SCRT",
+      chainId: envSecret.chainId,
+      waitSec: 40,
+      secretAddress: stkdSCRTContractAddress,
+      amount: stkdSCRTExpected,
+    },
+  };
+};
 const ibc = (b: any) => ({
   ...b,
   txName: "ibc",
-  denom: "uscrt",
+  denom: scrtDenomOsmosis,
   stakable: true,
   unstakable: false,
   secretAddress: null,
-  chainId: envSecret.chainId,
+  chainId: envOsmosis.chainId,
+  wait: {
+    denom: "uscrt",
+    chainId: envSecret.chainId,
+    amount: b.amount,
+    waitSec: 120,
+  },
 });
 const unwrap = (b: any) => ({
   ...b,
   txName: "unwrap",
-  denom: "uscrt",
+  denom: "sSCRT",
   chainId: envSecret.chainId,
-  secretAddress: null,
-  stakable: true,
+  secretAddress: sSCRTContractAddress,
+  wait: {
+    denom: "sSCRT",
+    chainId: envSecret.chainId,
+    waitSec: 30,
+    amount: `-${b.amount}`,
+  },
 });
 
 const statuses: any = ref({});
@@ -170,30 +194,12 @@ watch([() => props.amounts, () => props.state !== UI_STATE.TX_SIGNING && props.p
   }
 
   const osmosisTxs = [];
-  const queries: any[][] = [];
   let totalSCRT = BigNumber(reduce.base?.amount || 0);
   if (reduce.ibc) {
     let find = props.amounts?.find((d) => d.denom === scrtDenomOsmosis);
     totalSCRT = totalSCRT.plus(find!.amount);
     osmosisTxs.push(find, reduce.ibc);
     find!.id = reduce.ibc.waitId;
-    queries.push([
-      {
-        type: "ibc",
-        chainId: envOsmosis.chainId,
-        denom: scrtDenomOsmosis,
-        amount: find!.amount,
-        id: reduce.ibc.waitId,
-      },
-      {
-        type: "balance",
-        denom: "uscrt",
-        chainId: envSecret.chainId,
-        amount: find!.amount,
-        wait: 120,
-        id: reduce.ibc.id,
-      },
-    ]);
   }
   let scrtTxs = [];
   let baseTxs = [];
@@ -202,23 +208,6 @@ watch([() => props.amounts, () => props.state !== UI_STATE.TX_SIGNING && props.p
     totalSCRT = totalSCRT.plus(find!.amount);
     scrtTxs.push(find, reduce.unwrap);
     find!.id = reduce.unwrap.waitId;
-    queries.push([
-      {
-        type: "unwrap",
-        chainId: envSecret.chainId,
-        secretAddress: sSCRTContractAddress,
-        amount: find!.amount,
-        id: reduce.unwrap.waitId,
-      },
-      {
-        type: "balance",
-        denom: "sSCRT",
-        chainId: envSecret.chainId,
-        id: reduce.unwrap.id,
-        wait: 30,
-        amount: `-${find!.amount}`,
-      },
-    ]);
   }
 
   if (reduce.base) {
@@ -267,44 +256,12 @@ watch([() => props.amounts, () => props.state !== UI_STATE.TX_SIGNING && props.p
       osmosisTxs.push(reduce.stake);
     }
   }
-  queries.push(
-    [
-      osmosisTxs.length || scrtTxs.length
-        ? {
-            type: "waitAll",
-            denom: "uscrt",
-            chainId: envSecret.chainId,
-            amount: totalSCRT.toString(),
-          }
-        : null,
-      {
-        id: reduce.stake.waitId,
-        type: "stake",
-        denom: "uscrt",
-        chainId: envSecret.chainId,
-        secretAddress: stkdSCRTContractAddress,
-        amount: totalSCRT.toString(),
-      },
-      {
-        id: reduce.stake.id,
-        type: "balance",
-        denom: "stkd-SCRT",
-        status: [reduce.stake.id, "started", "finished"],
-        chainId: envSecret.chainId,
-        wait: 30,
-        secretAddress: stkdSCRTContractAddress,
-        amount: BigNumber(reduce.stake?.amount)
-          .multipliedBy(1 - 0.2 / 100 - 0.01 / 100)
-          .toString(),
-      },
-    ].filter((d) => !!d)
-  );
-  const { startQueries, events } = useRouteQueries(queries);
-  emit("queryUpdate", startQueries);
+  const events = new EventEmitter();
+  emit("tasks", { tasks: reduce, events });
   const route = [osmosisTxs, baseTxs, scrtTxs].filter((d) => !!d.length).sort((a, b) => a.length - b.length);
   // statuses.value = {};
   events.on("status", ({ jobId, status }) => {
-    console.log({jobId, status})
+    console.log({ jobId, status });
     statuses.value = {
       ...statuses.value,
       [jobId]: status,
