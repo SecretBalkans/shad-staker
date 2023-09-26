@@ -37,6 +37,12 @@
           }
         "
       />
+      <div v-if="fsm.value">
+        {{ fsm.value.value }}
+        <div v-if="fsm.value.matches('working.ibc')">IBC</div>
+        <div v-if="fsm.value.matches('working.unwrap')">Unwrap</div>
+        <div v-if="fsm.value?.matches('working.base')">Base</div>
+      </div>
       <div style="width: 100%; height: 24px" />
 
       <div>
@@ -111,7 +117,7 @@
 <script setup lang="ts">
 import { useAssets } from "@/def-composables/useAssets";
 import type { BalanceAmount, Nullable } from "@/utils/interfaces";
-import { onMounted, reactive, watch } from "vue";
+import { onMounted, reactive, ref, watch } from "vue";
 import BigNumber from "bignumber.js";
 import { computed } from "vue";
 import { IgntButton } from "@ignt/vue-library";
@@ -123,8 +129,8 @@ import ScrtStakeRoute from "@/components/ScrtStakeRoute.vue";
 import { useSecretStakingMarketData } from "@/def-composables/useSecretStakingMarketData";
 import { UI_STATE } from "@/utils/interfaces";
 import { useStakeFSM } from "@/def-composables/state/useStakeFSM";
-import { interpret } from "xstate";
 import { EventEmitter } from "events";
+import { useMachine } from "@xstate/vue";
 
 interface TxData {
   receiver: string;
@@ -179,27 +185,32 @@ const resetTx = (): void => {
   state.events = null;
   state.currentUIState = UI_STATE.STAKE;
 };
-const sendTx = async (): Promise<void> => {
-  state.currentUIState = UI_STATE.TX_SIGNING;
-  try {
-    const machine = useStakeFSM(state.tasks, state.events!);
+const fsm = ref(null as any);
+const machine = useStakeFSM();
 
-    const service = interpret(machine);
-    const txResult = await new Promise((resolve, reject) => {
-      const subscription = service.subscribe((state: any) => {});
-      service.onTransition((d) => console.log("Transition", d.changed, d.value));
-      service.start();
-      service.send("START");
-    });
+const stateMachine = useMachine(machine);
+const resetMachine = (): void => {
+  stateMachine.service.stop();
+  stateMachine.service.start();
+  fsm.value = stateMachine.state;
+  stateMachine.service.onTransition((context: any) => console.log(context));
 
-    // service.start();
-    // const txResult = await ;
-    console.log({ txResult });
+  stateMachine.service.onDone((event: any) => {
+    console.log(event);
     resetTx();
     state.currentUIState = UI_STATE.TX_SUCCESS;
     setTimeout(() => {
       resetTx();
     }, 2500);
+  });
+};
+resetMachine();
+
+const sendTx = async (): Promise<void> => {
+  state.currentUIState = UI_STATE.TX_SIGNING;
+  try {
+    stateMachine.send("INIT", { tasks: state.tasks });
+    stateMachine.send("START");
   } catch (e) {
     console.error(e);
     state.currentUIState = UI_STATE.TX_ERROR;
@@ -268,4 +279,3 @@ function updateStakeRouteQueries(startQueries: any) {
   state.startQueries = startQueries;
 }
 </script>
-import { ref } from 'vue';

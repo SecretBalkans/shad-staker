@@ -16,6 +16,7 @@ function getTimeoutTimestamp() {
 
 const IBCTxGasStakeGas = "" + 350_000;
 const secretGasPrice = 0.1;
+
 async function ibcFn(task: any) {
   const walletStore = useWalletStore();
   return await walletStore.activeClients[task.chainId].signAndBroadcast(
@@ -75,6 +76,7 @@ async function balanceWaitTask(task: any) {
   } while (BigNumber(task.amount)[`${isWatchingReduction ? "isLessThan" : "isGreaterThan"}`](totalDiff));
   return totalDiff.toNumber();
 }
+
 async function unwrapFn(task: any) {
   const walletStore = useWalletStore();
   return await walletStore.secretJsClient!.executeSecretContract(
@@ -113,47 +115,49 @@ async function stakeFn(task: any) {
     ]
   );
 }
-function txMachine(contextTaskKey: string, taskFn: (task: any) => Promise<any>, events: EventEmitter) {
+
+function txMachine(contextTaskKey: string, taskFn: (task: any) => Promise<any>) {
   return {
-    initial: "signing",
+    initial: "check",
     states: {
+      check: {
+        always: [
+          {
+            target: "signing",
+            cond: (context: any) => !!context.tasks[contextTaskKey],
+          },
+          {
+            target: "skipped",
+            cond: (context: any) => !context.tasks[contextTaskKey],
+          },
+        ],
+      },
+      skipped: {
+        type: "final" as "final",
+      },
       signing: {
-        onEntry: (context: any) => events.emit("status", { jobId: context.tasks[contextTaskKey].waitId, status: "signing" }),
         invoke: {
           src: (context: any) => context.tasks[contextTaskKey] && taskFn(context.tasks[contextTaskKey]),
           onDone: {
             target: "balanceWait",
-            actions: [
-              assign({ jobStates: (context: any) => ({ ...context.jobStates, [contextTaskKey]: "signed" }) }),
-              (context: any) => events.emit("status", { jobId: context.tasks[contextTaskKey].waitId, status: "signed" }),
-            ],
+            actions: [assign({ jobStates: (context: any) => ({ ...context.jobStates, [contextTaskKey]: "signed" }) })],
           },
           onError: {
-            target: "#failure",
-            actions: [
-              assign({ jobStates: (context: any) => ({ ...context.jobStates, [contextTaskKey]: "error" }) }),
-              (context: any) => events.emit("status", { jobId: context.tasks[contextTaskKey].waitId, status: "rejected" }),
-            ],
+            target: "failure",
+            actions: [assign({ jobStates: (context: any) => ({ ...context.jobStates, [contextTaskKey]: "error" }) })],
           },
         },
       },
       balanceWait: {
         invoke: {
-          onEntry: (context: any) => events.emit("status", { jobId: context.tasks[contextTaskKey].id, status: "started" }),
           src: (context: any) => balanceWaitTask(context.tasks[contextTaskKey].wait),
           onDone: {
             target: "success",
-            actions: [
-              assign({ jobStates: (context: any) => ({ ...context.jobStates, [contextTaskKey]: "finished" }) }),
-              (context: any) => events.emit("status", { jobId: context.tasks[contextTaskKey].id, status: "finished" }),
-            ],
+            actions: [assign({ jobStates: (context: any) => ({ ...context.jobStates, [contextTaskKey]: "finished" }) })],
           },
           onError: {
             target: "failure",
-            actions: [
-              assign({ jobStates: (context: any) => ({ ...context.jobStates, [contextTaskKey]: "error" }) }),
-              (context: any) => events.emit("status", { jobId: context.tasks[contextTaskKey].id, status: "rejected" }),
-            ],
+            actions: [assign({ jobStates: (context: any) => ({ ...context.jobStates, [contextTaskKey]: "error" }) })],
           },
         },
       },
@@ -167,7 +171,7 @@ function txMachine(contextTaskKey: string, taskFn: (task: any) => Promise<any>, 
   };
 }
 
-export const useStakeFSM = ({ ibc, unwrap, base, stake }: { stake: any; ibc: any; unwrap: any; base: any }, events: EventEmitter) => {
+export const useStakeFSM = () => {
   return createMachine(
     {
       id: "moveAndStake",
@@ -175,10 +179,10 @@ export const useStakeFSM = ({ ibc, unwrap, base, stake }: { stake: any; ibc: any
       initial: "idle",
       context: {
         tasks: {
-          ibc,
-          unwrap,
-          base,
-          stake,
+          ibc: null,
+          unwrap: null,
+          base: null,
+          stake: null,
         },
         jobStates: {
           ibc: "",
@@ -189,9 +193,29 @@ export const useStakeFSM = ({ ibc, unwrap, base, stake }: { stake: any; ibc: any
       states: {
         idle: {
           on: {
-            START: {
-              target: ["working.stake", unwrap && "working.unwrap", ibc && "working.ibc"].filter((d) => !!d),
+            INIT: {
+              actions: [
+                assign((context, event: any) => ({ ...context, tasks: event.tasks, jobStates: { ibc: "", unwrap: "", stake: "" } })),
+              ],
             },
+            START: [
+              {
+                target: ["working.stake", "working.unwrap", "working.ibc"],
+                cond: (context) => !!context.tasks.ibc && !!context.tasks.unwrap,
+              },
+              {
+                target: ["working.stake", "working.ibc"],
+                cond: (context) => !!context.tasks.ibc && !context.tasks.unwrap,
+              },
+              {
+                target: ["working.stake", "working.unwrap"],
+                cond: (context) => !context.tasks.ibc && !!context.tasks.unwrap,
+              },
+              {
+                target: ["working.stake"],
+                cond: (context) => !context.tasks.ibc && !context.tasks.unwrap,
+              },
+            ],
           },
         },
         working: {
@@ -201,25 +225,32 @@ export const useStakeFSM = ({ ibc, unwrap, base, stake }: { stake: any; ibc: any
               initial: "waitAll",
               states: {
                 waitAll: {
-                  on: {
-                    "": {
-                      cond: "areAllBalanceWait",
-                      target: "staking",
-                    },
+                  always: {
+                    cond: "areAllBalanceWait",
+                    target: "staking",
                   },
                 },
-                staking: txMachine("stake", stakeFn, events),
+                staking: {
+                  ...txMachine("stake", stakeFn),
+                  onDone: "success",
+                },
+                success: {
+                  type: "final" as "final",
+                },
               },
             },
-            ...(unwrap ? { unwrap: txMachine("unwrap", unwrapFn, events) } : {}),
-            ...(ibc ? { ibc: txMachine("ibc", ibcFn, events) } : {}),
+            unwrap: txMachine("unwrap", unwrapFn),
+            ibc: txMachine("ibc", ibcFn),
           },
+          onDone: "#success",
         },
         success: {
           id: "success",
+          type: "final" as "final",
         },
         failure: {
           id: "failure",
+          type: "final" as "final",
         },
       },
     },

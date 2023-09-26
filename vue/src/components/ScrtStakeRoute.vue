@@ -80,7 +80,8 @@ const stake = (b: BalanceAmount) => {
       .toFixed(6);
   const stkdSCRTExpected = BigNumber(stkdSCRTRawPrice)
     .multipliedBy(1 - 0.2 / 100 - 0.01 / 100)
-    .toString();
+    .minus(1 / 10 ** 6)
+    .toFixed(6);
   return {
     ...b,
     txName: "stake",

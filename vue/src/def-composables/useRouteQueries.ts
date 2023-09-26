@@ -1,6 +1,6 @@
 /* eslint-disable no-case-declarations */
 import { useWalletStore } from "@/stores/useWalletStore";
-import { MsgTransfer } from "../../../ts-client/ibc.applications.transfer.v1/types/ibc/applications/transfer/v1/tx";
+import { MsgTransfer } from "example-client-ts/ibc.applications.transfer.v1/types/ibc/applications/transfer/v1/tx";
 import { useDenom } from "@/def-composables/useDenom";
 import BigNumber from "bignumber.js";
 import { useAssets } from "./useAssets";
