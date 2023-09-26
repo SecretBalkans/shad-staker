@@ -1,46 +1,44 @@
 <template>
   <div>
     <div class="pt-8">
-      <div class="text-xs text-gray-600">Liquid staked SCRT and wait for unbounding period</div>
+      <div class="text-xs text-gray-600">Unstake stkdSCRT and wait for unbonding period to receive SCRT</div>
     </div>
-    <IgntCard>
-      <template #header>
-        <div class="">
-          <div v-if="hasAnyBalance">
-            <IgntAmountSelect :mode="'unstake'" class="token-selector--main" :selected="state.tx.amounts"
-              :balances="balances.assets" @update="handleTxAmountUpdate" />
+    <div>
+      <div class="">
+        <div v-if="hasAnyBalance">
+          <IgntAmountSelect
+            :mode="'unstake'"
+            class="token-selector--main"
+            :selected="state.tx.amounts"
+            :balances="balances.assets"
+            @update="handleTxAmountUpdate"
+          />
 
-            <div class="mt-5 flex align-center items-center justify-center">
-              <IgntButton style="width: 100%" :disabled="!ableToTx" @click="withdraw">Withdraw
-              </IgntButton>
-            </div>
+          <div class="mt-5 flex align-center items-center justify-center">
+            <IgntButton style="width: 100%" :disabled="!ableToTx" @click="withdraw" :busy="state.isTxOngoing">Withdraw</IgntButton>
           </div>
         </div>
-      </template>
-      <template #default>
-        <div class="p-5 break-all">
-          <StakingInfo :withdraw="true" />
-        </div>
-        <div class="p-5 pt-0 text-right">
-
-        </div>
-      </template>
-    </IgntCard>
+      </div>
+      <div class="p-5 break-all">
+        <StakingInfo :withdraw="true" />
+      </div>
+      <div class="p-5 pt-0 text-right"></div>
+    </div>
 
     <UnbondingsInfo />
   </div>
 </template>
 <script setup lang="ts">
-import { IgntButton, IgntCard } from '@ignt/vue-library';
-import StakingInfo from './StakingInfo.vue';
-import UnbondingsInfo from './UnbondingsInfo.vue';
-import { computed, onMounted, reactive, watch } from 'vue';
-import { useAssets } from '@/def-composables/useAssets';
-import BigNumber from 'bignumber.js';
-import IgntAmountSelect from './IgntAmountSelect.vue';
-import type { BalanceAmount } from '@/utils/interfaces';
-import { useWalletStore } from '@/stores/useWalletStore';
-import { envSecret } from '@/env';
+import { IgntButton, IgntCard } from "@ignt/vue-library";
+import StakingInfo from "./StakingInfo.vue";
+import UnbondingsInfo from "./UnbondingsInfo.vue";
+import { computed, onMounted, reactive, watch } from "vue";
+import { useAssets } from "@/def-composables/useAssets";
+import BigNumber from "bignumber.js";
+import IgntAmountSelect from "./IgntAmountSelect.vue";
+import type { BalanceAmount } from "@/utils/interfaces";
+import { useWalletStore } from "@/stores/useWalletStore";
+import { envSecret } from "@/env";
 
 interface TxData {
   receiver: string;
@@ -55,6 +53,7 @@ interface State {
   advancedOpen: boolean;
   startQueries: any;
   executed: boolean;
+  isTxOngoing: boolean;
 }
 
 const initialState: State = {
@@ -68,6 +67,7 @@ const initialState: State = {
   startQueries: null,
   executed: false,
   advancedOpen: false,
+  isTxOngoing: false,
 };
 
 const walletStore = useWalletStore();
@@ -90,11 +90,13 @@ const handleTxAmountUpdate = (selected: BalanceAmount[]) => {
 };
 
 const withdraw = async () => {
-  const inputAmount = (Number(state.tx.amounts[0].amount) * 10 ** 6).toString()
-  console.log("Input amount: ", inputAmount)
-  const result = await walletStore.secretJsClient?.executeStkdSecretWithdraw(inputAmount)
-  console.log("Executed withdrawal...: ", result)
-}
+  const inputAmount = (Number(state.tx.amounts[0].amount) * 10 ** 6).toString();
+  console.log("Input amount: ", inputAmount);
+  state.isTxOngoing = true;
+  const result = await walletStore.secretJsClient?.executeStkdSecretWithdraw(inputAmount);
+  state.isTxOngoing = false;
+  console.log("Executed withdrawal...: ", result);
+};
 
 let validTxAmount = computed<boolean>(() => {
   return (
@@ -134,5 +136,4 @@ onMounted(() => {
     }
   );
 });
-
 </script>

@@ -45,8 +45,8 @@ export class SecretClient {
   async executeSecretContract(
     contractAddress: string,
     msg: any,
-    gasPrice = 0.015,
-    gasLimit = 1700000,
+    gasPrice = 0.035,
+    gasLimit = 350000,
     waitForCommit = true,
     funds = null as Nullable<Coin[]>
   ) {
@@ -148,22 +148,16 @@ export class SecretClient {
         redeem_amount: amount,
       },
     });
-    const result = await this.executeSecretContract(
-      stkdSCRTContractAddress,
-      msgUnbond(amount)
-    )
-    return result
+    const result = await this.executeSecretContract(stkdSCRTContractAddress, msgUnbond(amount), 0.1, 250_000);
+    return result;
   }
 
   async executeStkdSecretClaim() {
     const msgClaim = () => ({
-      claim: {}
+      claim: {},
     });
-    const result = await this.executeSecretContract(
-      stkdSCRTContractAddress,
-      msgClaim()
-    )
-    return result
+    const result = await this.executeSecretContract(stkdSCRTContractAddress, msgClaim());
+    return result;
   }
 }
 
