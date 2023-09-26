@@ -1,168 +1,96 @@
 <template>
   <div>
     <div class="pt-8">
-      <div class="text-xs text-gray-600">Liquid stake SCRT from Osmosis or Secret chain</div>
-
-      <!--      <div>
-        <input
-          v-model="state.tx.receiver"
-          class="mt-1 py-2 px-4 h-12 bg-gray-100 border-xs text-base leading-tight w-full rounded-xl outline-0"
-          :class="{
-            'border border-red-400': state.tx.receiver.length > 0 && !validReceiver,
-          }"
-          placeholder="Recipient address"
-          :disabled="!hasAnyBalance"
-        />
-        <div v-if="state.tx.receiver.length > 0 && !validReceiver" class="text-xs text-red-400 mt-1">Invalid address</div>
-      </div>-->
+      <div class="text-xs text-gray-600">
+        {{
+          state.currentUIState === UI_STATE.STAKE
+            ? `Liquid stake SCRT from Osmosis or Secret chain`
+            : isTxError || isTxSuccess
+            ? `Finished.`
+            : `Executing...`
+        }}
+      </div>
     </div>
-    <div v-if="hasAnyBalance">
+    <div v-if="hasAnyBalance && state.currentUIState === UI_STATE.STAKE">
       <IgntAmountSelect
         :mode="'stake'"
         class="token-selector--main"
-        :selected="state.tx.amounts"
+        :selected="state.amounts"
         :balances="balances.assets"
         @update="handleTxAmountUpdate"
       />
-      <div class="text-xs pb-1 pt-5">Route</div>
-      <ScrtStakeRoute
-        :price="+stkdSecretInfo?.price"
-        :amounts="state.tx.amounts"
-        :state="state.currentUIState"
-        @queryUpdate="updateStakeRouteQueries"
-        @tasks="
-          ({ tasks, events }) => {
-            state.tasks = tasks;
-            state.events = events;
-          }
-        "
-      />
-      <div v-if="fsm.value">
-        {{ fsm.value.value }}
-        <div v-if="fsm.value.matches('working.ibc')">IBC</div>
-        <div v-if="fsm.value.matches('working.unwrap')">Unwrap</div>
-        <div v-if="fsm.value?.matches('working.base')">Base</div>
+    </div>
+    <div v-if="state.amounts[0] || state.currentUIState === UI_STATE.TX_SIGNING || isTxSuccess || isTxError">
+      <div class="text-xs pb-1 pt-5 text-gray-600" v-if="fsm.context.tasks.stake?.wait?.amount">
+        Route for
+        {{
+          `${[fsm.context.tasks.unwrap, fsm.context.tasks.base, fsm.context.tasks.ibc].filter((d) => !!d).length > 1 ? `a total of ` : ``}`
+        }}{{ fsm.context.tasks.stake?.wait?.amount }} stkd-SCRT
       </div>
-      <div style="width: 100%; height: 24px" />
+      <StakeRoute :fsm="fsm"></StakeRoute>
+    </div>
+    <div>
+      <div v-if="isTxError" class="flex items-center justify-center text-xs text-red-500 italic mt-2">Error submitting Tx</div>
 
-      <div>
-        <IgntButton style="width: 100%" :disabled="!ableToTx" @click="sendTx" :busy="isTxOngoing">Stake</IgntButton>
-        <div v-if="isTxError" class="flex items-center justify-center text-xs text-red-500 italic mt-2">Error submitting Tx</div>
-
-        <div v-if="isTxSuccess" class="flex items-center justify-center text-xs text-green-500 italic mt-2">Tx submitted successfully</div>
-      </div>
+      <div v-if="isTxSuccess" class="flex items-center justify-center text-xxs text-green-500 italic mt-2">Staked successfully</div>
+    </div>
+    <div style="width: 100%; height: 24px" />
+    <div>
+      <ignt-button
+        @click="() => resetTx()"
+        class="w-full"
+        v-if="state.currentUIState !== UI_STATE.STAKE"
+        :type="state.currentUIState === UI_STATE.TX_SIGNING ? `primary` : `secondary`"
+      >
+        {{ state.currentUIState === UI_STATE.TX_SIGNING ? `Cancel` : "Close" }}
+        <ignt-clear-icon :class="`inline-flex text-${state.currentUIState === UI_STATE.TX_SIGNING ? `white` : `black`}-500 pb-0.5`" />
+      </ignt-button>
+      <IgntButton
+        style="width: 100%"
+        :disabled="!ableToTx"
+        @click="sendTx"
+        :busy="isTxOngoing"
+        v-if="state.currentUIState === UI_STATE.STAKE"
+      >
+        Stake
+      </IgntButton>
     </div>
     <div>
       <StakingInfo :withdraw="false" />
     </div>
-    <!-- <div
-      class="flex text-xs font-semibold items-center mt-8"
-      :class="[
-        {
-          'cursor-pointer': hasAnyBalance,
-          'text-gray-400': !hasAnyBalance,
-        },
-      ]"
-      @click="
-        (evt: MouseEvent) => {
-          toggleAdvanced();
-					return evt;
-        }
-      "
-    >
-      Advanced
-      <template v-if="hasAnyBalance">
-        <IgntChevronDownIcon :class="{ 'rotate-180': state.advancedOpen }" class="ml-1" />
-      </template>
-    </div>
-
-    <div v-if="state.advancedOpen && hasAnyBalance" style="width: 100%; height: 24px" />
-
-    <div v-if="state.advancedOpen && hasAnyBalance" class="advanced">
-      <div class="text-xs pb-2">Fees</div>
-
-      <IgntAmountSelect class="token-selector" :selected="state.tx.fees" :balances="balances.assets" @update="handleTxFeesUpdate" />
-
-      <div class="text-xs mt-8 text-gray-600">Reference (memo)</div>
-
-      <div class="mb-4">
-        <input
-          v-model="state.tx.memo"
-          class="mt-1 py-2 px-4 h-12 bg-gray-100 border-xs text-base leading-tight w-full rounded-xl outline-0"
-          placeholder="Enter a reference"
-        />
-      </div>
-
-      <div class="text-xs text-gray-600">Channel</div>
-
-      <div class="input-wrapper">
-        <input
-          v-model="state.tx.ch"
-          class="mt-1 py-2 px-4 h-12 bg-gray-100 border-xs text-base leading-tight w-full rounded-xl outline-0"
-          placeholder="Enter a channel"
-        />
-      </div>
-    </div>
-
-    <div style="width: 100%; height: 24px" />
-
-    <div>
-      <IgntButton style="width: 100%" :disabled="!ableToTx" @click="sendTx" :busy="isTxOngoing">Send </IgntButton>
-      <div v-if="isTxError" class="flex items-center justify-center text-xs text-red-500 italic mt-2">Error submitting Tx</div>
-
-      <div v-if="isTxSuccess" class="flex items-center justify-center text-xs text-green-500 italic mt-2">Tx submitted successfully</div>
-    </div> -->
   </div>
 </template>
 <script setup lang="ts">
 import { useAssets } from "@/def-composables/useAssets";
-import type { BalanceAmount, Nullable } from "@/utils/interfaces";
-import { onMounted, reactive, ref, watch } from "vue";
+import type { BalanceAmount } from "@/utils/interfaces";
+import { UI_STATE } from "@/utils/interfaces";
+import { computed, onMounted, reactive, watch } from "vue";
 import BigNumber from "bignumber.js";
-import { computed } from "vue";
-import { IgntButton } from "@ignt/vue-library";
+import { IgntButton, IgntClearIcon } from "@ignt/vue-library";
 import IgntAmountSelect from "./IgntAmountSelect.vue";
 import { useWalletStore } from "@/stores/useWalletStore";
 import { envSecret } from "@/env";
 import StakingInfo from "./StakingInfo.vue";
-import ScrtStakeRoute from "@/components/ScrtStakeRoute.vue";
 import { useSecretStakingMarketData } from "@/def-composables/useSecretStakingMarketData";
-import { UI_STATE } from "@/utils/interfaces";
 import { useStakeFSM } from "@/def-composables/state/useStakeFSM";
-import { EventEmitter } from "events";
 import { useMachine } from "@xstate/vue";
-
-interface TxData {
-  receiver: string;
-  ch: string;
-  amounts: Array<BalanceAmount>;
-  memo: string;
-  fees: Array<BalanceAmount>;
-}
+import StakeRoute from "@/components/StakeRoute.vue";
 
 interface State {
-  tx: TxData;
+  amounts: Array<BalanceAmount>;
   currentUIState: UI_STATE;
   advancedOpen: boolean;
-  startQueries: any;
   executed: boolean;
-  tasks: any;
-  events: Nullable<EventEmitter>;
+  fsm: any;
+  fsmValue: any;
 }
 
 const initialState: State = {
-  tx: {
-    receiver: "",
-    ch: "",
-    amounts: [],
-    memo: "",
-    fees: [],
-  },
-  startQueries: null,
+  amounts: [],
   executed: false,
-  tasks: null,
-  events: null,
   currentUIState: UI_STATE.STAKE,
+  fsm: null,
+  fsmValue: null,
   advancedOpen: false,
 };
 const state = reactive(initialState);
@@ -175,41 +103,29 @@ const marketData = computed(() => walletStore.secretJsClient && useSecretStaking
 const stkdSecretInfo = computed(() => marketData.value?.stkdSecretInfo.value);
 
 const resetTx = (): void => {
-  state.tx.amounts = [];
-  state.tx.receiver = "";
-  state.tx.memo = "";
-  state.tx.ch = "";
-  state.tx.fees = [];
-  state.executed = false;
-  state.tasks = null;
-  state.events = null;
-  state.currentUIState = UI_STATE.STAKE;
+  if (state.currentUIState !== UI_STATE.STAKE) {
+    handleTxAmountUpdate([]);
+    bootstrapTxAmount();
+    resetMachine();
+    state.executed = false;
+    state.currentUIState = UI_STATE.STAKE;
+  }
 };
-const fsm = ref(null as any);
 const machine = useStakeFSM();
-
-const stateMachine = useMachine(machine);
+let stateMachine = useMachine(machine);
+const fsm = computed(() => stateMachine.state.value);
+stateMachine.service.start();
 const resetMachine = (): void => {
-  stateMachine.service.stop();
-  stateMachine.service.start();
-  fsm.value = stateMachine.state;
-  stateMachine.service.onTransition((context: any) => console.log(context));
-
-  stateMachine.service.onDone((event: any) => {
-    console.log(event);
-    resetTx();
-    state.currentUIState = UI_STATE.TX_SUCCESS;
-    setTimeout(() => {
-      resetTx();
-    }, 2500);
-  });
+  stateMachine.send("RESET");
 };
-resetMachine();
-
+stateMachine.service.onTransition((context: any, event: any) => {
+  if (context.matches("success") || context.matches("failure")) {
+    state.currentUIState = context.matches("success") ? UI_STATE.TX_SUCCESS : UI_STATE.TX_ERROR;
+  }
+});
 const sendTx = async (): Promise<void> => {
   state.currentUIState = UI_STATE.TX_SIGNING;
   try {
-    stateMachine.send("INIT", { tasks: state.tasks });
     stateMachine.send("START");
   } catch (e) {
     console.error(e);
@@ -218,13 +134,17 @@ const sendTx = async (): Promise<void> => {
 };
 
 const handleTxAmountUpdate = (selected: BalanceAmount[]) => {
-  state.tx.amounts = selected;
+  state.amounts = selected;
+  stateMachine.send("INIT", { amounts: state.amounts, price: stkdSecretInfo.value?.price });
 };
+
 const parseAmount = (amount: string): BigNumber => {
   return !amount ? new BigNumber(0) : new BigNumber(amount);
 };
 const hasAnyBalance = computed<boolean>(
-  () => balances.value.assets.length && balances.value.assets.some((x: any) => parseAmount(x.amount ?? "0").isPositive())
+  () =>
+    balances.value.assets.length &&
+    balances.value.assets.some((x: any) => parseAmount(x.amount ?? "0").isPositive() && stkdSecretInfo.value?.price)
 );
 const isTxOngoing = computed<boolean>(() => {
   return state.currentUIState === UI_STATE.TX_SIGNING;
@@ -238,8 +158,8 @@ const isTxError = computed<boolean>(() => {
 
 let validTxAmount = computed<boolean>(() => {
   return (
-    state.tx.amounts.length > 0 &&
-    state.tx.amounts.every((x) => {
+    state.amounts.length > 0 &&
+    state.amounts.every((x) => {
       let parsedAmount = parseAmount(x.amount);
 
       return (
@@ -255,9 +175,9 @@ let validTxAmount = computed<boolean>(() => {
 let ableToTx = computed<boolean>(() => validTxAmount.value);
 const bootstrapTxAmount = () => {
   let firstBalance = balances.value.assets.find((d: any) => d.stakable && BigNumber(d.amount).isGreaterThan(0));
-  if (hasAnyBalance.value && firstBalance && !state.tx.amounts.length) {
+  if (hasAnyBalance.value && firstBalance && !state.amounts.length) {
     state.executed = true;
-    state.tx.amounts[0] = {
+    state.amounts[0] = {
       ...firstBalance,
       amount: "0",
     };
@@ -274,8 +194,4 @@ onMounted(() => {
     }
   );
 });
-
-function updateStakeRouteQueries(startQueries: any) {
-  state.startQueries = startQueries;
-}
 </script>

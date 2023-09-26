@@ -1,8 +1,8 @@
 import useOracle from "@/composables/custom/useOracle";
 let query: any;
 export const useStkdSecretPrice = () => {
-  const priceOracle = useOracle();
   if (!query) {
+    const priceOracle = useOracle();
     query = priceOracle.QueryStkdSecretPrice({
       enabled: true,
       staleTime: 12000,

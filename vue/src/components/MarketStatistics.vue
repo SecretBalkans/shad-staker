@@ -35,9 +35,10 @@ import { useStkdSecretPrice } from "@/def-composables/useStkdSecretPrice";
 import { useWalletStore } from "@/stores/useWalletStore";
 import { computed } from "vue";
 const walletStore = useWalletStore();
+const queryPrice = useStkdSecretPrice();
 const marketData = computed(() => walletStore.secretJsClient && useSecretStakingMarketData(walletStore.secretJsClient));
 const stkdSecretInfo = computed(() => marketData.value?.stkdSecretInfo.value);
-const stkdSecretPrice = computed(() => useStkdSecretPrice().value);
+const stkdSecretPrice = computed(() => queryPrice.value);
 </script>
 
 <style>
