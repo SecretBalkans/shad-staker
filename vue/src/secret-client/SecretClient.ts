@@ -45,8 +45,8 @@ export class SecretClient {
   async executeSecretContract(
     contractAddress: string,
     msg: any,
-    gasPrice = 0.015,
-    gasLimit = 1700000,
+    gasPrice = 0.035,
+    gasLimit = 350000,
     waitForCommit = true,
     funds = null as Nullable<Coin[]>
   ) {
@@ -139,6 +139,24 @@ export class SecretClient {
       msgUnbonding(),
       codeHash.code_hash ? codeHash.code_hash : "0"
     );
+    return result;
+  }
+
+  async executeStkdSecretWithdraw(amount: string) {
+    const msgUnbond = (amount: string) => ({
+      unbond: {
+        redeem_amount: amount,
+      },
+    });
+    const result = await this.executeSecretContract(stkdSCRTContractAddress, msgUnbond(amount), 0.1, 250_000);
+    return result;
+  }
+
+  async executeStkdSecretClaim() {
+    const msgClaim = () => ({
+      claim: {},
+    });
+    const result = await this.executeSecretContract(stkdSCRTContractAddress, msgClaim());
     return result;
   }
 }

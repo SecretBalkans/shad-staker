@@ -1,91 +1,56 @@
 <template>
   <div class="flex flex-col">
-    <IgntAmountInputRow
-      v-for="(x,i) in selected"
-      :key="`${x.denom}`"
-      :amount="x"
-      class="flex justify-between items-center my-1 py-3 rounded-xl relative px-4"
-      @change="
-        (val) => {
+    <IgntAmountInputRow v-for="(x, i) in selected" :key="`${x.denom}`" :amount="x"
+      class="flex justify-between items-center my-1 py-3 rounded-xl relative px-4" @change="(val) => {
           handleInputChange({ denom: x.denom, chainId: x.chainId, secretAddress: x.secretAddress, amount: val });
         }
-      "
-      @remove="
-        (val) => {
-          handleTokenRemove(i);
-        }
-      "
-    />
+        " @remove="(val) => {
+      handleTokenRemove(i);
+    }
+    " />
 
-    <div
-      v-if="ableToBeSelected?.length > 0"
-      class="flex items-center text-xs font-medium text-gray-600 mt-2 px-2 cursor-pointer"
-      @click="
-        () => {
+    <div v-if="ableToBeSelected?.length > 0"
+      class="flex items-center text-xs font-medium text-gray-600 mt-2 px-2 cursor-pointer" @click="() => {
           state.modalOpen = true;
         }
-      "
-    >
+        ">
       <IgntAddIcon class="text-black text-xl" />
       <div class="ml-3 mt-0.5">Add asset</div>
     </div>
 
-    <IgntModal
-      :visible="state.modalOpen"
-      :close-icon="true"
-      :title="'Select asset'"
-      @close="
-        () => {
-          state.modalOpen = false;
-        }
-      "
-    >
+    <IgntModal :visible="state.modalOpen" :close-icon="true" :title="'Select asset'" @close="() => {
+        state.modalOpen = false;
+      }
+      ">
       <template #body>
         <div class="relative mb-4 flex items-center">
           <div class="z-50">
             <IgntSearchIcon className="ml-4" />
           </div>
-          <input
-            v-model="state.tokenSearch"
+          <input v-model="state.tokenSearch"
             class="-ml-8 pl-10 pr-10 leading-12 h-12 appearance-none w-full outline-none border-none rounded-xl focus:shadow-outline"
-            placeholder="Search assets"
-          />
-          <div
-            v-if="state.tokenSearch"
-            class="z-50 absolute mr-4"
-            @click.prevent="
-              () => {
-                state.tokenSearch = '';
-              }
-            "
-          >
+            placeholder="Search assets" />
+          <div v-if="state.tokenSearch" class="z-50 absolute mr-4" @click.prevent="() => {
+              state.tokenSearch = '';
+            }
+            ">
             <IgntClearIcon />
           </div>
         </div>
         <div class="relative mb-3">
-          <div
-            v-for="(x, i) in ableToBeSelected"
-            :key="'balance_select_' + x.denom"
-            class="flex justify-start w-full items-center my-1 py-3 rounded-xl hover:bg-gray-100 px-2"
-            :index="i"
-            @click="
-              () => {
+          <div v-for="(x, i) in ableToBeSelected" :key="'balance_select_' + x.denom"
+            class="flex justify-start w-full items-center my-1 py-3 rounded-xl hover:bg-gray-100 px-2" :index="i" @click="() => {
                 handleTokenSelect(x);
               }
-            "
-          >
-            <IgntDenom :denom="x.denom" :chain-id="x.chainId" :is-secret="!!x.secretAddress" modifier="avatar" />
+              ">
+            <IgntDenom :icon="x.icon" :denom="x.denom" :chain-id="x.chainId" :is-secret="!!x.secretAddress"
+              modifier="avatar" />
             <div class="flex flex-col justify-between ml-4">
               <div class="font-semibold">
-                <IgntDenom :chain-id="x?.chainId" :denom="x?.denom ?? ''" :key="x?.denom" :is-secret="!!x?.secretAddress" />
-                <IgntDenom
-                  :chain-id="x?.chainId"
-                  :denom="x?.denom ?? ''"
-                  modifier="path"
-                  class="text-normal opacity-50 ml-1.5"
-                  :key="x?.denom"
-                  :shorten="false"
-                />
+                <IgntDenom :chain-id="x?.chainId" :denom="x?.denom ?? ''" :key="x?.denom"
+                  :is-secret="!!x?.secretAddress" />
+                <IgntDenom :chain-id="x?.chainId" :denom="x?.denom ?? ''" modifier="path"
+                  class="text-normal opacity-50 ml-1.5" :key="x?.denom" :shorten="false" />
               </div>
 
               <div class="text-xs">{{ parseAmount(x.amount) }} available</div>

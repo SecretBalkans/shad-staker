@@ -6,6 +6,7 @@ import type { useClient } from "@/composables/useClient";
 export const useConnectionStatus = (client: any) => {
   const query = useCosmosBaseTendermintV1Beta1(client);
   const nodeInfo = query.ServiceGetNodeInfo();
+  console.log("Node info: ", nodeInfo)
   const apiConnected = computed(() => !nodeInfo.error.value);
   const rpcConnected = ref(false);
   const rpcCheck = async () => {
