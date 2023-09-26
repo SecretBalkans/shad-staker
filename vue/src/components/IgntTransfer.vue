@@ -1,32 +1,12 @@
 <template>
-  <IgntTabs
-    :tabHeaderClasses="['text-3xl', 'font-semibold', 'p-0', 'm-0', 'mb-2.5', 'flex-1']"
-    :tabLinkClasses="['pr-4']"
-    :inactiveLinkClasses="['text-gray-400']"
-    :activeLinkClasses="['text-black']"
-  >
+  <IgntTabs :tabHeaderClasses="['text-3xl', 'font-semibold', 'p-0', 'm-0', 'mb-2.5', 'flex-1']" :tabLinkClasses="['pr-4']"
+    :inactiveLinkClasses="['text-gray-400']" :activeLinkClasses="['text-black']">
     <div class="" tabTitle="Stake">
       <IgntSend v-if="isEnabled" />
       <MarketStatistics />
     </div>
-    <div class="" tabTitle="Unstake">
-      <IgntCard v-if="isEnabled">
-        <template #header>
-          <div class="flex bg-gray-100 align-center items-center justify-center w-full py-10">
-            <IgntQRCode :value="walletProvider.secretAddress" color="#000" :width="112" />
-          </div>
-        </template>
-        <template #default>
-          <div class="p-5 break-all">
-            {{ walletProvider.secretAddress }}
-          </div>
-          <div class="p-5 pt-0 text-right">
-            <IgntClipboard :text="walletProvider.secretAddress" />
-          </div>
-        </template>
-      </IgntCard>
-      <StakingInfo :withdraw="true" />
-      <UnbondingsInfo />
+    <div class="" tabTitle="Withdraw">
+      <IgntWithdraw v-if="isEnabled" />
     </div>
   </IgntTabs>
 </template>
@@ -41,6 +21,7 @@ import { computed } from "vue";
 import MarketStatistics from "./MarketStatistics.vue";
 import StakingInfo from "./StakingInfo.vue";
 import UnbondingsInfo from "./UnbondingsInfo.vue";
+import IgntWithdraw from "./IgntWithdraw.vue";
 
 const walletProvider = useWalletStore();
 const isEnabled = computed(() => !!walletProvider.secretAddress);
