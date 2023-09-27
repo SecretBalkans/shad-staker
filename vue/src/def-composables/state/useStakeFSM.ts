@@ -23,7 +23,7 @@ function getTimeoutTimestamp() {
 const IBCTxGasStakeGas = "" + 350_000;
 const secretGasPrice = 0.1;
 
-async function broadcast(message: string | Uint8Array, task: any): Promise<string> {
+async function broadcast(message: string | Uint8Array | any, task: any): Promise<string> {
   const walletStore = useWalletStore();
   if (typeof message === "string") {
     const response: TxResponse = await walletStore.secretJsClient!.broadcastSignedMessage(message);
@@ -35,6 +35,12 @@ async function broadcast(message: string | Uint8Array, task: any): Promise<strin
       prefix: activeClient.env.prefix,
     });
     try {
+      // deserialized message is { 0:...,1:..}
+      if (!(message instanceof Uint8Array)) {
+        const array: number[] = [];
+        Object.values(message).forEach((val: any) => array.push(+val));
+        message = Uint8Array.from(array);
+      }
       const response = await client.broadcastTx(message, 0, 1000);
       return response.transactionHash;
     } catch (e) {
@@ -98,20 +104,25 @@ async function balanceWaitTask(startAmount: any, task: any) {
   let totalDiff = BigNumber(0);
   let prevAmount = startAmount;
   const isWatchingReduction = BigNumber(task.amount).isNegative();
-  let timeout = task.waitSec;
+  let timeout = task.waitSec * 10;
   do {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     const currentAmount = balances.value.assets.find((x: any) => x.denom === task.denom)?.amount;
-    const diff = BigNumber(currentAmount).minus(prevAmount);
-    prevAmount = currentAmount;
-    if (diff[isWatchingReduction ? `isNegative` : `isPositive`]()) {
-      totalDiff = BigNumber(totalDiff).plus(diff);
+    if (!Number.isNaN(+currentAmount)) {
+      const diff = BigNumber(currentAmount).minus(prevAmount);
+      prevAmount = currentAmount;
+      if (diff[isWatchingReduction ? `isNegative` : `isPositive`]()) {
+        totalDiff = BigNumber(totalDiff).plus(diff);
+      }
     }
     timeout--;
     if (timeout === 0) {
       throw new Error("Balance Change Timeout");
     }
-  } while (BigNumber(task.amount)[`${isWatchingReduction ? "isLessThan" : "isGreaterThan"}`](totalDiff));
+  } while (
+    Number.isNaN(totalDiff.toNumber()) ||
+    BigNumber(task.amount)[`${isWatchingReduction ? "isLessThan" : "isGreaterThan"}`](totalDiff)
+  );
   return totalDiff.toNumber();
 }
 
@@ -134,22 +145,27 @@ async function unwrapFn(task: any): Promise<string> {
 
 async function stakeFn(task: any): Promise<string> {
   const walletStore = useWalletStore();
-  return await walletStore.secretJsClient!.signContractCall(
-    stkdSCRTContractAddress,
-    {
-      stake: {},
-    },
-    secretGasPrice,
-    +IBCTxGasStakeGas,
-    [
+  try {
+    return await walletStore.secretJsClient!.signContractCall(
+      stkdSCRTContractAddress,
       {
-        amount: BigNumber(task.amount)
-          .multipliedBy(10 ** 6)
-          .toFixed(0),
-        denom: "uscrt",
+        stake: {},
       },
-    ]
-  );
+      secretGasPrice,
+      +IBCTxGasStakeGas,
+      [
+        {
+          amount: BigNumber(task.amount)
+            .multipliedBy(10 ** 6)
+            .toFixed(0),
+          denom: "uscrt",
+        },
+      ]
+    );
+  } catch (e) {
+    console.log(e);
+    throw e;
+  }
 }
 
 function addJobStateData(context: any, contextTaskKey: string, eventType: string, eventData: any) {
@@ -186,7 +202,7 @@ function txMachine(contextTaskKey: string, taskFn: (task: any) => Promise<string
         invoke: {
           src: (context: any) => taskFn(context.tasks[contextTaskKey]),
           onDone: {
-            target: "txBroadcast",
+            target: "initialBalance",
             actions: [
               assign({
                 jobStates: (context: any, event: any) =>
@@ -209,7 +225,34 @@ function txMachine(contextTaskKey: string, taskFn: (task: any) => Promise<string
           },
         },
       },
-      txBroadcast: {
+      initialBalance: {
+        invoke: {
+          src: (context: any) => balanceWaitTask(0, { ...context.tasks[contextTaskKey].wait, amount: 0 }),
+          onDone: {
+            target: "broadcast",
+            actions: [
+              assign({
+                jobStates: (context: any, event: any) =>
+                  addJobStateData(context, contextTaskKey, "initialBalance", {
+                    startAmount: event.data,
+                  }),
+              }),
+            ],
+          },
+          onError: {
+            target: "failure",
+            actions: [
+              assign({
+                jobStates: (context: any, event: any) =>
+                  addJobStateData(context, contextTaskKey, "initialBalance", {
+                    error: event.data,
+                  }),
+              }),
+            ],
+          },
+        },
+      },
+      broadcast: {
         invoke: {
           src: (context: any) => broadcast(context.jobStates[contextTaskKey].txSigned, context.tasks[contextTaskKey]),
           onDone: {
@@ -219,6 +262,7 @@ function txMachine(contextTaskKey: string, taskFn: (task: any) => Promise<string
                 jobStates: (context: any, event: any) =>
                   addJobStateData(context, contextTaskKey, "txBroadcast", {
                     txHash: event.data,
+                    txSigned: "<discarded>",
                   }),
               }),
             ],
@@ -237,89 +281,51 @@ function txMachine(contextTaskKey: string, taskFn: (task: any) => Promise<string
         },
       },
       txWait: {
-        initial: "initialBalance",
-        states: {
-          initialBalance: {
-            entry: [
+        invoke: {
+          src: (context: any) => balanceWaitTask(context.jobStates[contextTaskKey].startAmount, context.tasks[contextTaskKey].wait),
+          onDone: {
+            target: "success",
+            actions: [
               assign({
-                jobStates: (context: any) => {
-                  const { balances } = useAssets();
-                  const startAmount = balances.value.assets.find((x: any) => x.denom === context.tasks[contextTaskKey].wait.denom)?.amount;
-                  return addJobStateData(context, contextTaskKey, "initialBalance", {
-                    startAmount,
-                  });
-                },
-              }),
-            ],
-            always: "balanceWait",
-          },
-          balanceWait: {
-            invoke: {
-              src: (context: any) => balanceWaitTask(context.jobStates[contextTaskKey].startAmount, context.tasks[contextTaskKey].wait),
-              onDone: {
-                target: "success",
-                actions: [
-                  assign({
-                    jobStates: (context: any) =>
-                      addJobStateData(context, contextTaskKey, "balanceWait", {
-                        finished: true,
-                      }),
-                  }),
-                ],
-              },
-              onError: {
-                target: "failure",
-                actions: [
-                  assign({
-                    jobStates: (context: any, event: any) =>
-                      addJobStateData(context, contextTaskKey, "balanceWait", {
-                        error: event.data,
-                      }),
-                  }),
-                ],
-              },
-            },
-          },
-          success: {
-            type: "final" as "final",
-            entry: [
-              assign({
-                jobStates: (context: any) =>
-                  addJobStateData(context, contextTaskKey, "finished", {
+                jobStates: (context: any, event: any) =>
+                  addJobStateData(context, contextTaskKey, "balanceWait", {
                     finished: true,
+                    result: event.data,
                   }),
               }),
             ],
           },
-          failure: {
-            type: "final" as "final",
-            entry: [
+          onError: {
+            target: "failure",
+            actions: [
               assign({
-                jobStates: (context: any) => addJobStateData(context, contextTaskKey, "error", {}),
+                jobStates: (context: any, event: any) =>
+                  addJobStateData(context, contextTaskKey, "balanceWait", {
+                    error: event.data,
+                  }),
               }),
             ],
           },
         },
-        onDone: [
-          {
-            cond: (context: any) => {
-              return !context.jobStates[contextTaskKey].error;
-            },
-            target: "success",
-          },
-          {
-            cond: (context: any) => {
-              return !!context.jobStates[contextTaskKey].error;
-            },
-            target: "failure",
-          },
-        ],
       },
       success: {
         type: "final" as "final",
+        entry: [
+          assign({
+            jobStates: (context: any) =>
+              addJobStateData(context, contextTaskKey, "finished", {
+                finished: true,
+              }),
+          }),
+        ],
       },
       failure: {
         type: "final" as "final",
+        entry: [
+          assign({
+            jobStates: (context: any) => addJobStateData(context, contextTaskKey, "error", {}),
+          }),
+        ],
       },
     },
   };
@@ -423,13 +429,13 @@ export const useStakeFSM = () => {
           onDone: [
             {
               cond: (context, event) => {
-                return context.jobStates.stake.type !== "error";
+                return !context.jobStates.stake.error;
               },
               target: "#success",
             },
             {
               cond: (context, event) => {
-                return context.jobStates.stake.type === "error";
+                return !!context.jobStates.stake.error;
               },
               target: "#failure",
             },

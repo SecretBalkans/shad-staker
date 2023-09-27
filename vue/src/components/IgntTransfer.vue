@@ -3,7 +3,7 @@
     :inactiveLinkClasses="['text-gray-400']" :activeLinkClasses="['text-black']">
     <div class="" tabTitle="Stake">
       <IgntSend v-if="isEnabled" />
-      <MarketStatistics />
+      <MarketStatistics v-if="isEnabled" />
     </div>
     <div class="" tabTitle="Withdraw">
       <IgntWithdraw v-if="isEnabled" />
@@ -24,5 +24,5 @@ import UnbondingsInfo from "./UnbondingsInfo.vue";
 import IgntWithdraw from "./IgntWithdraw.vue";
 
 const walletProvider = useWalletStore();
-const isEnabled = computed(() => !!walletProvider.secretAddress);
+const isEnabled = computed(() => !!walletProvider.secretAddress && !!walletProvider.secretJsClient && !!walletProvider.osmoClient && !!walletProvider.secretClient);
 </script>

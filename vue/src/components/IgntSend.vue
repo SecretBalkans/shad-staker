@@ -77,9 +77,9 @@
 import { useAssets } from "@/def-composables/useAssets";
 import type { BalanceAmount } from "@/utils/interfaces";
 import { UI_STATE } from "@/utils/interfaces";
-import { computed, onMounted, reactive, watch } from "vue";
+import { computed, nextTick, onMounted, reactive, watch } from "vue";
 import BigNumber from "bignumber.js";
-import { IgntButton, IgntCard, IgntClearIcon, IgntWarningIcon } from "@ignt/vue-library";
+import { IgntButton, IgntCard, IgntClearIcon } from "@ignt/vue-library";
 import IgntAmountSelect from "./IgntAmountSelect.vue";
 import { useWalletStore } from "@/stores/useWalletStore";
 import { envSecret } from "@/env";
@@ -88,7 +88,6 @@ import { useSecretStakingMarketData } from "@/def-composables/useSecretStakingMa
 import { useStakeFSM } from "@/def-composables/state/useStakeFSM";
 import { useMachine } from "@xstate/vue";
 import StakeRoute from "@/components/StakeRoute.vue";
-import IgntHeader from "@/App.vue";
 
 interface State {
   amounts: Array<BalanceAmount>;
@@ -96,17 +95,17 @@ interface State {
   advancedOpen: boolean;
   executed: boolean;
   confirmCancel: boolean;
-  fsm: any;
-  fsmValue: any;
 }
 
+const machine = useStakeFSM();
+const PERSISTENCE_KEY = "currentState_v0";
+const persisted = JSON.parse(localStorage.getItem(PERSISTENCE_KEY) || "{}");
+const latestState = persisted.fsm || machine.initialState;
 const initialState: State = {
   amounts: [],
   executed: false,
-  currentUIState: UI_STATE.STAKE,
-  fsm: null,
+  currentUIState: persisted.uiState || UI_STATE.STAKE,
   confirmCancel: false,
-  fsmValue: null,
   advancedOpen: false,
 };
 const state = reactive(initialState);
@@ -130,14 +129,33 @@ const resetTx = (isCancel = false): void => {
     state.currentUIState = UI_STATE.STAKE;
   }
 };
-const machine = useStakeFSM();
-let stateMachine = useMachine(machine);
+let stateMachine = useMachine(machine, { state: latestState });
 const fsm = computed(() => stateMachine.state.value);
 stateMachine.service.start();
 const resetMachine = (isCancel = false): void => {
+  localStorage.removeItem(PERSISTENCE_KEY);
   stateMachine.send("RESET", { isCancel });
 };
+function persistCurrentFSM() {
+  if (state.currentUIState === UI_STATE.TX_SIGNING || UI_STATE.TX_SUCCESS || UI_STATE.TX_ERROR) {
+    try {
+      console.log("Persisted", { state: fsm.value.value, context: fsm.value.context });
+      localStorage.setItem(
+        PERSISTENCE_KEY,
+        JSON.stringify({
+          fsm: fsm.value,
+          uiState: state.currentUIState,
+        })
+      );
+    } catch (e) {
+      console.error("Error persisting state", e);
+    }
+  }
+}
 stateMachine.service.onTransition((context: any) => {
+  nextTick(() => {
+    persistCurrentFSM();
+  });
   if (context.matches("success") || context.matches("failure")) {
     state.currentUIState = context.matches("success") ? UI_STATE.TX_SUCCESS : UI_STATE.TX_ERROR;
   }
@@ -202,6 +220,11 @@ const bootstrapTxAmount = () => {
     };
   }
 };
+
+watch(
+  () => JSON.stringify({ state }),
+  () => nextTick(persistCurrentFSM)
+);
 
 onMounted(() => {
   watch(

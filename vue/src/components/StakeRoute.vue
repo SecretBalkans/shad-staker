@@ -103,6 +103,8 @@
       "
     />
     <RouteAsset :amount="tasks.stake.wait" :col-id="2" @update="updateMaxLengths" :max-len="maxLengths[2]"></RouteAsset>
+    {{jobStates}}
+    {{fsm.value}}
   </div>
 </template>
 
