@@ -1,6 +1,6 @@
-import { MsgExecuteContract, SecretNetworkClient, type Coin } from "secretjs";
-import { stkdSCRTContractAddress } from "@/utils/const";
-import type { Nullable } from "@/utils/interfaces";
+import {BroadcastMode, type Coin, MsgExecuteContract, SecretNetworkClient, TxResponse} from "secretjs";
+import {stkdSCRTContractAddress} from "@/utils/const";
+import type {Nullable} from "@/utils/interfaces";
 
 export class SecretClient {
   signer: any;
@@ -45,8 +45,8 @@ export class SecretClient {
   async executeSecretContract(
     contractAddress: string,
     msg: any,
-    gasPrice = 0.035,
-    gasLimit = 350000,
+    gasPrice = 0.015,
+    gasLimit = 1700000,
     waitForCommit = true,
     funds = null as Nullable<Coin[]>
   ) {
@@ -69,6 +69,67 @@ export class SecretClient {
         gasPriceInFeeDenom: gasPrice,
         feeDenom: "uscrt",
       }
+    );
+  }
+
+  /**
+   * Sign a contract call returning a message to broadcast.
+   * @param contractAddress
+   * @param msg
+   * @param gasPrice
+   * @param gasLimit
+   * @param funds
+   */
+  async signContractCall(
+    contractAddress: string,
+    msg: any,
+    gasPrice = 0.015,
+    gasLimit = 1700000,
+    funds = null as Nullable<Coin[]>
+  ): Promise<string> {
+    const codeHash = await this.client.query.compute.codeHashByContractAddress({
+      contract_address: contractAddress,
+    });
+    return this.client.tx.signTx(
+      [
+        new MsgExecuteContract({
+          contract_address: contractAddress,
+          code_hash: codeHash.code_hash,
+          sender: this.client.address,
+          msg,
+          sent_funds: funds || [],
+        }),
+      ],
+      {
+        gasLimit,
+        gasPriceInFeeDenom: gasPrice,
+        feeDenom: "uscrt",
+      }
+    );
+  }
+
+  async broadcastSignedMessage(signedMessage: string, gasPrice?: number, gasLimit?: number): Promise<TxResponse> {
+    return this.client.tx.broadcastSignedTx(signedMessage, {
+      gasLimit,
+      gasPriceInFeeDenom: gasPrice,
+      feeDenom: "uscrt",
+      waitForCommit: false,
+      broadcastMode: BroadcastMode.Sync
+    });
+  }
+
+  async waitForCommit(transactionHash: string, isIbc: boolean = false): Promise<TxResponse | null> {
+    return this.client.query.getTx(
+      transactionHash,
+      isIbc
+        ? {
+            resolveResponses: true,
+            resolveResponsesCheckIntervalMs: 5 * 1000,
+            resolveResponsesTimeoutMs: 15 * 60 * 1000,
+          }
+        : {
+            resolveResponses: false,
+          }
     );
   }
 
@@ -139,24 +200,6 @@ export class SecretClient {
       msgUnbonding(),
       codeHash.code_hash ? codeHash.code_hash : "0"
     );
-    return result;
-  }
-
-  async executeStkdSecretWithdraw(amount: string) {
-    const msgUnbond = (amount: string) => ({
-      unbond: {
-        redeem_amount: amount,
-      },
-    });
-    const result = await this.executeSecretContract(stkdSCRTContractAddress, msgUnbond(amount), 0.1, 250_000);
-    return result;
-  }
-
-  async executeStkdSecretClaim() {
-    const msgClaim = () => ({
-      claim: {},
-    });
-    const result = await this.executeSecretContract(stkdSCRTContractAddress, msgClaim());
     return result;
   }
 }

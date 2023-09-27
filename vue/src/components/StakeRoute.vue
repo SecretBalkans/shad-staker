@@ -3,21 +3,29 @@
     <RouteAsset :amount="tasks.ibc" :col-id="0" @update="updateMaxLengths" :max-len="maxLengths[0]"></RouteAsset>
     <StakeOp
       :op="`IBC from Osmosis (${tasks.ibc.amount} SCRT)`"
-      :pulse="props.fsm?.matches('working.ibc.txWait')"
+      :pulse="props.fsm?.matches('working.ibc.txWait') || props.fsm?.matches('working.ibc.txBroadcast')"
       :green="jobStates.ibc.type === 'finished'"
-      :red="jobStates.ibc.type === 'error'"
+      :red="!!jobStates.ibc.error"
       :ping="props.fsm?.matches('working.ibc.signing')"
-      :yellow="props.fsm?.matches('working.ibc.signing') || props.fsm?.matches('working.ibc.txWait')"
+      :yellow="
+        props.fsm?.matches('working.ibc.signing') ||
+        props.fsm?.matches('working.ibc.txWait') ||
+        props.fsm?.matches('working.ibc.txBroadcast')
+      "
     ></StakeOp>
     <RouteAsset :amount="tasks.ibc.wait" :col-id="1" @update="updateMaxLengths" :max-len="maxLengths[1]"></RouteAsset>
     <span v-if="!tasks.base && !tasks.unwrap">
       <StakeOp
         :op="`Stake from Osmosis (${tasks.ibc.amount} SCRT)`"
-        :pulse="props.fsm?.matches('working.stake.staking.txWait')"
+        :pulse="props.fsm?.matches('working.stake.staking.txWait') || props.fsm?.matches('working.stake.staking.txBroadcast')"
         :green="jobStates.stake.type === 'finished'"
-        :red="jobStates.stake.type === 'error'"
+        :red="!!jobStates.stake.error"
         :ping="props.fsm?.matches('working.stake.staking.signing')"
-        :yellow="props.fsm?.matches('working.stake.staking.signing') || props.fsm?.matches('working.stake.staking.txWait')"
+        :yellow="
+          props.fsm?.matches('working.stake.staking.signing') ||
+          props.fsm?.matches('working.stake.staking.txWait') ||
+          props.fsm?.matches('working.stake.staking.txBroadcast')
+        "
       ></StakeOp>
       <RouteAsset :amount="tasks.stake.wait" :col-id="2" @update="updateMaxLengths" :max-len="maxLengths[2]"></RouteAsset>
     </span>
@@ -26,21 +34,30 @@
     <RouteAsset :amount="tasks.unwrap" :col-id="0" @update="updateMaxLengths" :max-len="maxLengths[0]"></RouteAsset>
     <StakeOp
       :op="`Unwrap private sSCRT (${tasks.unwrap.amount} sSCRT)`"
-      :pulse="props.fsm?.matches('working.unwrap.txWait')"
+      :pulse="props.fsm?.matches('working.unwrap.txWait') || props.fsm?.matches('working.unwrap.txBroadcast')"
       :green="jobStates.unwrap.type === 'finished'"
-      :red="jobStates.unwrap.type === 'error'"
+      :red="!!jobStates.unwrap.error"
       :ping="props.fsm?.matches('working.unwrap.signing')"
-      :yellow="props.fsm?.matches('working.unwrap.signing') || props.fsm?.matches('working.unwrap.txWait')"
+      :yellow="
+        props.fsm?.matches('working.unwrap.signing') ||
+        props.fsm?.matches('working.unwrap.txWait') ||
+        props.fsm?.matches('working.unwrap.txBroadcast')
+      "
     ></StakeOp>
-    <RouteAsset :amount="tasks.unwrap.wait" :col-id="1" @update="updateMaxLengths" :max-len="maxLengths[1]"></RouteAsset>
+    <RouteAsset v-if="tasks.base" :amount="tasks.unwrap.wait" :col-id="1" @update="updateMaxLengths" :max-len="maxLengths[1]"></RouteAsset>
     <span v-if="!tasks.base">
+      <RouteAsset :amount="tasks.stake" :col-id="1" @update="updateMaxLengths" :max-len="maxLengths[1]"></RouteAsset>
       <StakeOp
         :op="`Stake after unwrap (${tasks.unwrap.amount} sSCRT)${tasks.ibc ? ` and IBC from Osmosis (${tasks.ibc.amount} SCRT)` : ''}`"
-        :pulse="props.fsm?.matches('working.stake.staking.txWait')"
+        :pulse="props.fsm?.matches('working.stake.staking.txWait') || props.fsm?.matches('working.stake.staking.txBroadcast')"
         :green="jobStates.stake.type === 'finished'"
-        :red="jobStates.stake.type === 'error'"
+        :red="!!jobStates.stake.error"
         :ping="props.fsm?.matches('working.stake.staking.signing')"
-        :yellow="props.fsm?.matches('working.stake.staking.signing') || props.fsm?.matches('working.stake.staking.txWait')"
+        :yellow="
+          props.fsm?.matches('working.stake.staking.signing') ||
+          props.fsm?.matches('working.stake.staking.txWait') ||
+          props.fsm?.matches('working.stake.staking.txBroadcast')
+        "
       ></StakeOp>
       <RouteAsset :amount="tasks.stake.wait" :col-id="2" @update="updateMaxLengths" :max-len="maxLengths[2]"></RouteAsset>
     </span>
@@ -56,8 +73,8 @@
     <StakeOp
       type="wait"
       :pulse="props.fsm?.matches('working.stake.waitAll')"
-      :green="props.fsm?.matches('working.stake.staking') || jobStates.stake.type === 'finished'"
-      :red="jobStates.ibc?.type === 'error' || jobStates.unwrap?.type === 'error'"
+      :green="props.fsm?.matches('working.stake.staking') || jobStates.stake.type === 'finished' || !!jobStates.stake.error"
+      :red="!!jobStates.ibc?.error || !!jobStates.unwrap?.error"
       :op="`Wait ${[
         tasks.unwrap && `unwrap private sSCRT (${tasks.unwrap.amount} sSCRT)`,
         tasks.ibc && `IBC from Osmosis (${tasks.ibc.amount} SCRT)`,
@@ -75,12 +92,15 @@
       ]
         .filter((d) => !!d)
         .join(' + ')})`"
-      :status="jobStates.stake.type"
-      :pulse="props.fsm?.matches('working.stake.staking.txWait')"
+      :pulse="props.fsm?.matches('working.stake.staking.txWait') || props.fsm?.matches('working.stake.staking.txBroadcast')"
       :green="jobStates.stake.type === 'finished'"
-      :red="jobStates.stake.type === 'error'"
+      :red="!!jobStates.stake.error"
       :ping="props.fsm?.matches('working.stake.staking.signing')"
-      :yellow="props.fsm?.matches('working.stake.staking.signing') || props.fsm?.matches('working.stake.staking.txWait')"
+      :yellow="
+        props.fsm?.matches('working.stake.staking.signing') ||
+        props.fsm?.matches('working.stake.staking.txWait') ||
+        props.fsm?.matches('working.stake.staking.txBroadcast')
+      "
     />
     <RouteAsset :amount="tasks.stake.wait" :col-id="2" @update="updateMaxLengths" :max-len="maxLengths[2]"></RouteAsset>
   </div>
@@ -105,11 +125,13 @@ const amounts: any = { 0: {}, 1: {}, 2: {} };
 const maxLengths = ref({ 0: 90, 1: 90, 2: 90 } as any);
 
 const updateMaxLengths = ({ colId, amount, id }: any) => {
-  amounts[colId] = {
-    ...amounts[colId],
-    [id]: getAutoWidth(amount.toString()),
-  };
-  maxLengths.value[colId] = Math.max(...(Object.values(amounts[colId]) as number[]));
+  if (amount) {
+    amounts[colId] = {
+      ...amounts[colId],
+      [id]: getAutoWidth(amount.toString()),
+    };
+    maxLengths.value[colId] = Math.max(...(Object.values(amounts[colId]) as number[]));
+  }
 };
 /*
 const tasks2 = computed(() => {

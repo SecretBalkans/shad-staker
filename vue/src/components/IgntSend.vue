@@ -36,10 +36,24 @@
     </div>
     <div style="width: 100%; height: 24px" />
     <div>
+      <ignt-card v-if="state.currentUIState === UI_STATE.TX_SIGNING && state.confirmCancel" class="border-4 p-3">
+        Cancel all remaining transactions in the current route?
+        <small class="block">(signed transactions might already be executed.)</small>
+        <ignt-button @click="() => resetTx(true)" class="w-3/5 bg-red-300" type="secondary">
+          <ignt-clear-icon class="inline-block text-red-400 mr-3"></ignt-clear-icon>Yes, cancel execution!</ignt-button
+        >
+        <ignt-button @click="() => (state.confirmCancel = false)" class="w-1/3 bg-green-300 ml-3 max-h-20" type="secondary">
+          No, do not cancel
+        </ignt-button>
+      </ignt-card>
       <ignt-button
-        @click="() => resetTx()"
+        @click="
+          () =>
+            (state.currentUIState === UI_STATE.TX_SIGNING && confirmCancel()) ||
+            (state.currentUIState !== UI_STATE.TX_SIGNING && resetTx(false))
+        "
         class="w-full"
-        v-if="state.currentUIState !== UI_STATE.STAKE"
+        v-if="state.currentUIState !== UI_STATE.STAKE && !state.confirmCancel"
         :type="state.currentUIState === UI_STATE.TX_SIGNING ? `primary` : `secondary`"
       >
         {{ state.currentUIState === UI_STATE.TX_SIGNING ? `Cancel` : "Close" }}
@@ -51,8 +65,7 @@
         @click="sendTx"
         :busy="isTxOngoing"
         v-if="state.currentUIState === UI_STATE.STAKE"
-      >
-        Stake
+        >Stake
       </IgntButton>
     </div>
     <div>
@@ -66,7 +79,7 @@ import type { BalanceAmount } from "@/utils/interfaces";
 import { UI_STATE } from "@/utils/interfaces";
 import { computed, onMounted, reactive, watch } from "vue";
 import BigNumber from "bignumber.js";
-import { IgntButton, IgntClearIcon } from "@ignt/vue-library";
+import { IgntButton, IgntCard, IgntClearIcon, IgntWarningIcon } from "@ignt/vue-library";
 import IgntAmountSelect from "./IgntAmountSelect.vue";
 import { useWalletStore } from "@/stores/useWalletStore";
 import { envSecret } from "@/env";
@@ -75,12 +88,14 @@ import { useSecretStakingMarketData } from "@/def-composables/useSecretStakingMa
 import { useStakeFSM } from "@/def-composables/state/useStakeFSM";
 import { useMachine } from "@xstate/vue";
 import StakeRoute from "@/components/StakeRoute.vue";
+import IgntHeader from "@/App.vue";
 
 interface State {
   amounts: Array<BalanceAmount>;
   currentUIState: UI_STATE;
   advancedOpen: boolean;
   executed: boolean;
+  confirmCancel: boolean;
   fsm: any;
   fsmValue: any;
 }
@@ -90,6 +105,7 @@ const initialState: State = {
   executed: false,
   currentUIState: UI_STATE.STAKE,
   fsm: null,
+  confirmCancel: false,
   fsmValue: null,
   advancedOpen: false,
 };
@@ -101,13 +117,16 @@ const { balances } = useAssets();
 
 const marketData = computed(() => walletStore.secretJsClient && useSecretStakingMarketData(walletStore.secretJsClient));
 const stkdSecretInfo = computed(() => marketData.value?.stkdSecretInfo.value);
-
-const resetTx = (): void => {
+const confirmCancel = (): void => {
+  state.confirmCancel = true;
+};
+const resetTx = (isCancel = false): void => {
   if (state.currentUIState !== UI_STATE.STAKE) {
     handleTxAmountUpdate([]);
     bootstrapTxAmount();
-    resetMachine();
+    resetMachine(isCancel);
     state.executed = false;
+    state.confirmCancel = false;
     state.currentUIState = UI_STATE.STAKE;
   }
 };
@@ -115,10 +134,10 @@ const machine = useStakeFSM();
 let stateMachine = useMachine(machine);
 const fsm = computed(() => stateMachine.state.value);
 stateMachine.service.start();
-const resetMachine = (): void => {
-  stateMachine.send("RESET");
+const resetMachine = (isCancel = false): void => {
+  stateMachine.send("RESET", { isCancel });
 };
-stateMachine.service.onTransition((context: any, event: any) => {
+stateMachine.service.onTransition((context: any) => {
   if (context.matches("success") || context.matches("failure")) {
     state.currentUIState = context.matches("success") ? UI_STATE.TX_SUCCESS : UI_STATE.TX_ERROR;
   }

@@ -1,7 +1,7 @@
 <template>
-  <span class="inline-flex">
+  <span class="inline-flex"
+        :title="props.op">
     <span
-      :title="props.op"
       :class="{
         'animate-pulse': pulse,
         'bg-gray-200': pulse,
