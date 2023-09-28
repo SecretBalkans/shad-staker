@@ -1,110 +1,77 @@
 <template>
   <div v-if="tasks.ibc" class="flex-row">
     <RouteAsset :amount="tasks.ibc" :col-id="0" @update="updateMaxLengths" :max-len="maxLengths[0]"></RouteAsset>
-    <StakeOp
-      :op="`IBC from Osmosis (${tasks.ibc.amount} SCRT)`"
+    <StakeOp :op="`IBC from Osmosis (${tasks.ibc.amount} SCRT)`"
       :pulse="props.fsm?.matches('working.ibc.txWait') || props.fsm?.matches('working.ibc.txBroadcast')"
-      :green="jobStates.ibc.type === 'finished'"
-      :red="!!jobStates.ibc.error"
-      :ping="props.fsm?.matches('working.ibc.signing')"
-      :yellow="
-        props.fsm?.matches('working.ibc.signing') ||
+      :green="jobStates.ibc.type === 'finished'" :red="!!jobStates.ibc.error"
+      :ping="props.fsm?.matches('working.ibc.signing')" :yellow="props.fsm?.matches('working.ibc.signing') ||
         props.fsm?.matches('working.ibc.txWait') ||
         props.fsm?.matches('working.ibc.txBroadcast')
-      "
-    ></StakeOp>
+        "></StakeOp>
     <RouteAsset :amount="tasks.ibc.wait" :col-id="1" @update="updateMaxLengths" :max-len="maxLengths[1]"></RouteAsset>
     <span v-if="!tasks.base && !tasks.unwrap">
-      <StakeOp
-        :op="`Stake from Osmosis (${tasks.ibc.amount} SCRT)`"
+      <StakeOp :op="`Stake from Osmosis (${tasks.ibc.amount} SCRT)`"
         :pulse="props.fsm?.matches('working.stake.staking.txWait') || props.fsm?.matches('working.stake.staking.txBroadcast')"
-        :green="jobStates.stake.type === 'finished'"
-        :red="!!jobStates.stake.error"
-        :ping="props.fsm?.matches('working.stake.staking.signing')"
-        :yellow="
-          props.fsm?.matches('working.stake.staking.signing') ||
+        :green="jobStates.stake.type === 'finished'" :red="!!jobStates.stake.error"
+        :ping="props.fsm?.matches('working.stake.staking.signing')" :yellow="props.fsm?.matches('working.stake.staking.signing') ||
           props.fsm?.matches('working.stake.staking.txWait') ||
           props.fsm?.matches('working.stake.staking.txBroadcast')
-        "
-      ></StakeOp>
+          "></StakeOp>
       <RouteAsset :amount="tasks.stake.wait" :col-id="2" @update="updateMaxLengths" :max-len="maxLengths[2]"></RouteAsset>
     </span>
   </div>
   <div v-if="tasks.unwrap" class="flex-row">
     <RouteAsset :amount="tasks.unwrap" :col-id="0" @update="updateMaxLengths" :max-len="maxLengths[0]"></RouteAsset>
-    <StakeOp
-      :op="`Unwrap private sSCRT (${tasks.unwrap.amount} sSCRT)`"
+    <StakeOp :op="`Unwrap private sSCRT (${tasks.unwrap.amount} sSCRT)`"
       :pulse="props.fsm?.matches('working.unwrap.txWait') || props.fsm?.matches('working.unwrap.txBroadcast')"
-      :green="jobStates.unwrap.type === 'finished'"
-      :red="!!jobStates.unwrap.error"
-      :ping="props.fsm?.matches('working.unwrap.signing')"
-      :yellow="
-        props.fsm?.matches('working.unwrap.signing') ||
+      :green="jobStates.unwrap.type === 'finished'" :red="!!jobStates.unwrap.error"
+      :ping="props.fsm?.matches('working.unwrap.signing')" :yellow="props.fsm?.matches('working.unwrap.signing') ||
         props.fsm?.matches('working.unwrap.txWait') ||
         props.fsm?.matches('working.unwrap.txBroadcast')
-      "
-    ></StakeOp>
-    <RouteAsset v-if="tasks.base" :amount="tasks.unwrap.wait" :col-id="1" @update="updateMaxLengths" :max-len="maxLengths[1]"></RouteAsset>
+        "></StakeOp>
+    <RouteAsset v-if="tasks.base" :amount="tasks.unwrap.wait" :col-id="1" @update="updateMaxLengths"
+      :max-len="maxLengths[1]"></RouteAsset>
     <span v-if="!tasks.base">
       <RouteAsset :amount="tasks.stake" :col-id="1" @update="updateMaxLengths" :max-len="maxLengths[1]"></RouteAsset>
       <StakeOp
         :op="`Stake after unwrap (${tasks.unwrap.amount} sSCRT)${tasks.ibc ? ` and IBC from Osmosis (${tasks.ibc.amount} SCRT)` : ''}`"
         :pulse="props.fsm?.matches('working.stake.staking.txWait') || props.fsm?.matches('working.stake.staking.txBroadcast')"
-        :green="jobStates.stake.type === 'finished'"
-        :red="!!jobStates.stake.error"
-        :ping="props.fsm?.matches('working.stake.staking.signing')"
-        :yellow="
-          props.fsm?.matches('working.stake.staking.signing') ||
+        :green="jobStates.stake.type === 'finished'" :red="!!jobStates.stake.error"
+        :ping="props.fsm?.matches('working.stake.staking.signing')" :yellow="props.fsm?.matches('working.stake.staking.signing') ||
           props.fsm?.matches('working.stake.staking.txWait') ||
           props.fsm?.matches('working.stake.staking.txBroadcast')
-        "
-      ></StakeOp>
+          "></StakeOp>
       <RouteAsset :amount="tasks.stake.wait" :col-id="2" @update="updateMaxLengths" :max-len="maxLengths[2]"></RouteAsset>
     </span>
   </div>
   <div v-if="tasks.base" class="flex-row">
-    <RouteAsset
-      :amount="tasks.base"
-      v-if="tasks.base && (tasks.unwrap || tasks.ibc)"
-      :col-id="0"
-      @update="updateMaxLengths"
-      :max-len="maxLengths[0]"
-    ></RouteAsset>
-    <StakeOp
-      type="wait"
-      :pulse="props.fsm?.matches('working.stake.waitAll')"
+    <RouteAsset :amount="tasks.base" v-if="tasks.base && (tasks.unwrap || tasks.ibc)" :col-id="0"
+      @update="updateMaxLengths" :max-len="maxLengths[0]"></RouteAsset>
+    <StakeOp type="wait" :pulse="props.fsm?.matches('working.stake.waitAll')"
       :green="props.fsm?.matches('working.stake.staking') || jobStates.stake.type === 'finished' || !!jobStates.stake.error"
-      :red="!!jobStates.ibc?.error || !!jobStates.unwrap?.error"
-      :op="`Wait ${[
+      :red="!!jobStates.ibc?.error || !!jobStates.unwrap?.error" :op="`Wait ${[
         tasks.unwrap && `unwrap private sSCRT (${tasks.unwrap.amount} sSCRT)`,
         tasks.ibc && `IBC from Osmosis (${tasks.ibc.amount} SCRT)`,
       ]
         .filter((d) => !!d)
-        .join(' and ')}`"
-      v-if="tasks.unwrap || tasks.ibc"
-    />
+        .join(' and ')}`" v-if="tasks.unwrap || tasks.ibc" />
     <RouteAsset :amount="tasks.stake" :col-id="1" @update="updateMaxLengths" :max-len="maxLengths[1]"></RouteAsset>
-    <StakeOp
-      :op="`Stake SCRT (${[
-        tasks.base?.amount && `${tasks.base?.amount} on SCRT`,
-        tasks.unwrap?.amount && `${tasks.unwrap?.amount} unwrapped sSCRT`,
-        tasks.ibc?.amount && `${tasks.ibc?.amount} SCRT from Osmosis`,
-      ]
-        .filter((d) => !!d)
-        .join(' + ')})`"
+    <StakeOp :op="`Stake SCRT (${[
+      tasks.base?.amount && `${tasks.base?.amount} on SCRT`,
+      tasks.unwrap?.amount && `${tasks.unwrap?.amount} unwrapped sSCRT`,
+      tasks.ibc?.amount && `${tasks.ibc?.amount} SCRT from Osmosis`,
+    ]
+      .filter((d) => !!d)
+      .join(' + ')})`"
       :pulse="props.fsm?.matches('working.stake.staking.txWait') || props.fsm?.matches('working.stake.staking.txBroadcast')"
-      :green="jobStates.stake.type === 'finished'"
-      :red="!!jobStates.stake.error"
-      :ping="props.fsm?.matches('working.stake.staking.signing')"
-      :yellow="
-        props.fsm?.matches('working.stake.staking.signing') ||
+      :green="jobStates.stake.type === 'finished'" :red="!!jobStates.stake.error"
+      :ping="props.fsm?.matches('working.stake.staking.signing')" :yellow="props.fsm?.matches('working.stake.staking.signing') ||
         props.fsm?.matches('working.stake.staking.txWait') ||
         props.fsm?.matches('working.stake.staking.txBroadcast')
-      "
-    />
+        " />
     <RouteAsset :amount="tasks.stake.wait" :col-id="2" @update="updateMaxLengths" :max-len="maxLengths[2]"></RouteAsset>
-    {{jobStates}}
-    {{fsm.value}}
+    <!-- {{jobStates}}
+    {{fsm.value}} -->
   </div>
 </template>
 

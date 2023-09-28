@@ -4,71 +4,66 @@
       <div class="text-xs text-gray-600">
         {{
           state.currentUIState === UI_STATE.STAKE
-            ? `Liquid stake SCRT from Osmosis or Secret chain`
-            : isTxError || isTxSuccess
+          ? `Liquid stake SCRT from Osmosis or Secret chain`
+          : isTxError || isTxSuccess
             ? `Finished.`
             : `Executing...`
         }}
       </div>
     </div>
     <div v-if="hasAnyBalance && state.currentUIState === UI_STATE.STAKE">
-      <IgntAmountSelect
-        :mode="'stake'"
-        class="token-selector--main"
-        :selected="state.amounts"
-        :balances="balances.assets"
-        @update="handleTxAmountUpdate"
-      />
+      <IgntAmountSelect :mode="'stake'" class="token-selector--main" :selected="state.amounts" :balances="balances.assets"
+        @update="handleTxAmountUpdate" />
     </div>
     <div v-if="state.amounts[0] || state.currentUIState === UI_STATE.TX_SIGNING || isTxSuccess || isTxError">
       <div class="text-xs pb-1 pt-5 text-gray-600" v-if="fsm.context.tasks.stake?.wait?.amount">
         Route for
         {{
-          `${[fsm.context.tasks.unwrap, fsm.context.tasks.base, fsm.context.tasks.ibc].filter((d) => !!d).length > 1 ? `a total of ` : ``}`
+          `${[fsm.context.tasks.unwrap, fsm.context.tasks.base, fsm.context.tasks.ibc].filter((d) => !!d).length > 1 ? `a
+        total of ` : ``}`
         }}{{ fsm.context.tasks.stake?.wait?.amount }} stkd-SCRT
       </div>
       <StakeRoute :fsm="fsm"></StakeRoute>
     </div>
     <div>
-      <div v-if="isTxError" class="flex items-center justify-center text-xs text-red-500 italic mt-2">Error submitting Tx</div>
+      <div v-if="isTxError" class="flex items-center justify-center text-xs text-red-500 italic mt-2">Error submitting Tx
+      </div>
 
-      <div v-if="isTxSuccess" class="flex items-center justify-center text-xxs text-green-500 italic mt-2">Staked successfully</div>
+      <div v-if="isTxSuccess" class="flex items-center justify-center text-xxs text-green-500 italic mt-2">Staked
+        successfully</div>
     </div>
     <div style="width: 100%; height: 24px" />
     <div>
       <ignt-card v-if="state.currentUIState === UI_STATE.TX_SIGNING && state.confirmCancel" class="border-4 p-3">
-        Cancel all remaining transactions in the current route?
+        Do you really want to cancel?
         <small class="block">(signed transactions might already be executed.)</small>
-        <ignt-button @click="() => resetTx(true)" class="w-3/5 bg-red-300" type="secondary">
-          <ignt-clear-icon class="inline-block text-red-400 mr-3"></ignt-clear-icon>Yes, cancel execution!</ignt-button
-        >
-        <ignt-button @click="() => (state.confirmCancel = false)" class="w-1/3 bg-green-300 ml-3 max-h-20" type="secondary">
-          No, do not cancel
-        </ignt-button>
+        <div class="flex align-center items-center justify-center mt-2">
+          <ignt-button @click="() => resetTx(true)" class="w-2/5 mr-3" type="primary">
+            <ignt-clear-icon class="inline-block text-white mr-3"></ignt-clear-icon>Yes
+          </ignt-button>
+          <ignt-button @click="() => (state.confirmCancel = false)" class="w-2/5 max-h-20" type="secondary">
+            No
+          </ignt-button>
+        </div>
       </ignt-card>
-      <ignt-button
-        @click="
-          () =>
-            (state.currentUIState === UI_STATE.TX_SIGNING && confirmCancel()) ||
-            (state.currentUIState !== UI_STATE.TX_SIGNING && resetTx(false))
-        "
-        class="w-full"
-        v-if="state.currentUIState !== UI_STATE.STAKE && !state.confirmCancel"
-        :type="state.currentUIState === UI_STATE.TX_SIGNING ? `primary` : `secondary`"
-      >
-        {{ state.currentUIState === UI_STATE.TX_SIGNING ? `Cancel` : "Close" }}
-        <ignt-clear-icon :class="`inline-flex text-${state.currentUIState === UI_STATE.TX_SIGNING ? `white` : `black`}-500 pb-0.5`" />
-      </ignt-button>
-      <IgntButton
-        style="width: 100%"
-        :disabled="!ableToTx"
-        @click="sendTx"
-        :busy="isTxOngoing"
-        v-if="state.currentUIState === UI_STATE.STAKE"
-        >Stake
-      </IgntButton>
+      <div class="flex align-center items-center justify-center">
+        <ignt-button style="width: 150px" @click="() =>
+          (state.currentUIState === UI_STATE.TX_SIGNING && confirmCancel()) ||
+          (state.currentUIState !== UI_STATE.TX_SIGNING && resetTx(false))
+          " class="w-full" v-if="state.currentUIState !== UI_STATE.STAKE && !state.confirmCancel"
+          :type="state.currentUIState === UI_STATE.TX_SIGNING ? `primary` : `secondary`">
+          {{ state.currentUIState === UI_STATE.TX_SIGNING ? `Cancel` : "Close" }}
+          <ignt-clear-icon
+            :class="`inline-flex text-${state.currentUIState === UI_STATE.TX_SIGNING ? `white` : `black`}-500 pb-0.5`" />
+        </ignt-button>
+      </div>
+      <div class="flex align-center items-center justify-center">
+        <IgntButton style="width: 110px" :disabled="!ableToTx" @click="sendTx" :busy="isTxOngoing"
+          v-if="state.currentUIState === UI_STATE.STAKE">Stake
+        </IgntButton>
+      </div>
     </div>
-    <div>
+    <div class="p-5 break-all">
       <StakingInfo :withdraw="false" />
     </div>
   </div>

@@ -1,11 +1,11 @@
 <template>
   <div>
-    <div class="mt-4 flex justify-center text-red-900 text-xl">stkd-SCRT Market Statistics</div>
-    <div class="grid grid-cols-1 mt-3">
-      <div class="Box">
+    <div class="flex justify-center text-red-900 text-xl">stkd-SCRT Market Statistics</div>
+    <div class="flex-col mt-1">
+      <!-- <div class="Box">
         <div style="font-weight: 600">stkd-SCRT Exchange Rate</div>
         <div>{{ stkdSecretInfo?.price ? stkdSecretInfo.price / 10 ** 6 : "" }} SCRT/stkd-SCRT</div>
-      </div>
+      </div> -->
       <div class="Box">
         <div style="font-weight: 600">Total Supply</div>
         <div>{{ (stkdSecretInfo?.total_derivative_token_supply / 10 ** 6).toFixed(0) }} SCRT/stkd-SCRT</div>
@@ -22,10 +22,10 @@
         <div style="font-weight: 600">stkd-SCRT Market Cap</div>
         <div>{{ ((stkdSecretPrice * stkdSecretInfo?.total_derivative_token_supply) / 10 ** 12).toFixed(2) }} M</div>
       </div>
-      <div class="Box">
+      <!-- <div class="Box">
         <div style="font-weight: 600">APY</div>
         <div>~26%</div>
-      </div>
+      </div> -->
     </div>
   </div>
 </template>
@@ -45,8 +45,8 @@ const stkdSecretPrice = computed(() => queryPrice.value);
 .Box {
   background-color: #fff8f9;
   justify-content: center;
-  margin: 10px;
-  /* border: 2px solid #A71C24; */
+  border-bottom-width: 70%;
+  border-bottom: 3px solid #fff8f9;
 }
 
 .Box div {
