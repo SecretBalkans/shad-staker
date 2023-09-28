@@ -1,11 +1,17 @@
 <template>
   <span v-if="vk.hasViewingKey.value">
-    <span v-if="Number.isNaN(Number(amount))"> Loading... </span>
+    <span v-if="Number.isNaN(Number(amount))" class="text-sm"> Loading... </span>
     <span v-else>
       {{ amount }}
     </span>
   </span>
-  <ignt-button v-if="!vk.hasViewingKey.value" @click="vk.setViewingKey()">View balance</ignt-button>
+  <ignt-button
+    style="padding: 0.35rem !important; height: 2rem !important"
+    class="text-xs min-w-fit"
+    v-if="!vk.hasViewingKey.value"
+    @click="vk.setViewingKey()"
+    >View balance</ignt-button
+  >
 </template>
 
 <script lang="ts" setup>

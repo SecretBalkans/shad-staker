@@ -6,16 +6,20 @@
     <div>
       <div class="">
         <div v-if="hasAnyBalance">
-          <IgntAmountSelect :mode="'unstake'" class="token-selector--main" :selected="state.tx.amounts"
-            :balances="balances.assets" @update="handleTxAmountUpdate" />
+          <IgntAmountSelect
+            :mode="'unstake'"
+            class="token-selector--main"
+            :selected="state.tx.amounts"
+            :balances="balances.assets"
+            @update="handleTxAmountUpdate"
+          />
 
           <div class="mt-5 flex align-center items-center justify-center">
-            <IgntButton style="width: 110px" :disabled="!ableToTx" @click="withdraw" :busy="state.isTxOngoing">Withdraw
-            </IgntButton>
+            <IgntButton style="width: 110px" :disabled="!ableToTx" @click="withdraw" :busy="state.isTxOngoing">Withdraw </IgntButton>
           </div>
         </div>
       </div>
-      <div class="p-5 break-all">
+      <div class="p-5">
         <StakingInfo :withdraw="true" />
       </div>
       <div class="p-5 pt-0 text-right"></div>
@@ -25,7 +29,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { IgntButton, IgntCard } from "@ignt/vue-library";
+import { IgntButton } from "@ignt/vue-library";
 import StakingInfo from "./StakingInfo.vue";
 import UnbondingsInfo from "./UnbondingsInfo.vue";
 import { computed, onMounted, reactive, watch } from "vue";

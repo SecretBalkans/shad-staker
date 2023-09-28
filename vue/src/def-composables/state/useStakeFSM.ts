@@ -428,6 +428,10 @@ export const useStakeFSM = () => {
           },
           onDone: [
             {
+              cond: "isSomeTxFail",
+              target: "#failure",
+            },
+            {
               cond: (context, event) => {
                 return !context.jobStates.stake.error;
               },

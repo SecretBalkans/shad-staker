@@ -1,6 +1,6 @@
-import {BroadcastMode, type Coin, MsgExecuteContract, SecretNetworkClient, TxResponse} from "secretjs";
-import {stkdSCRTContractAddress} from "@/utils/const";
-import type {Nullable} from "@/utils/interfaces";
+import { BroadcastMode, type Coin, MsgExecuteContract, SecretNetworkClient, type TxResponse } from "secretjs";
+import { stkdSCRTContractAddress } from "@/utils/const";
+import type { Nullable } from "@/utils/interfaces";
 
 export class SecretClient {
   signer: any;
@@ -114,7 +114,7 @@ export class SecretClient {
       gasPriceInFeeDenom: gasPrice,
       feeDenom: "uscrt",
       waitForCommit: false,
-      broadcastMode: BroadcastMode.Sync
+      broadcastMode: BroadcastMode.Sync,
     });
   }
 
@@ -200,6 +200,24 @@ export class SecretClient {
       msgUnbonding(),
       codeHash.code_hash ? codeHash.code_hash : "0"
     );
+    return result;
+  }
+
+  async executeStkdSecretWithdraw(amount: string) {
+    const msgUnbond = (amount: string) => ({
+      unbond: {
+        redeem_amount: amount,
+      },
+    });
+    const result = await this.executeSecretContract(stkdSCRTContractAddress, msgUnbond(amount));
+    return result;
+  }
+
+  async executeStkdSecretClaim() {
+    const msgClaim = () => ({
+      claim: {},
+    });
+    const result = await this.executeSecretContract(stkdSCRTContractAddress, msgClaim());
     return result;
   }
 }

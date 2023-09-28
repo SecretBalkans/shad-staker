@@ -1,5 +1,5 @@
 <template>
-  <span class="z-10 inline-flex flex-col justify-center items-center">
+  <span class="z-10 inline-flex flex-col justify-center items-center" :style="{ marginLeft: `${maxLen < 48 ? 48 - maxLen : 0}px` }">
     <IgntDenom
       class="inline-flex"
       shorten

@@ -1,7 +1,7 @@
 <template>
   <section>
     <header class="flex items-center justify-between">
-      <h2 class="text-3xl text-black font-semibold p-0 m-0 mb-2.5 flex-1">Assets</h2>
+      <h2 class="text-2xl text-black font-semibold p-0 m-0 mb-2.5 flex-1">Assets</h2>
       <div v-if="isConnected && balances.assets.length && !balances.isLoading" class="flex items-center justify-end mb-2.5">
         <div class="z-50">
           <IgntSearchIcon />
@@ -40,7 +40,7 @@
           }"
           :class="`py-2 ${balance?.gas ? 'text-gray-600' : 'text-black'}`"
         >
-          <td class="flex items-center py-5 font-semibold">
+          <td class="flex items-center py-4 font-semibold">
             <IgntDenom
               :icon="balance?.icon"
               :denom="balance?.denom ?? ''"
@@ -69,7 +69,7 @@
               :shorten="false"
             />
           </td>
-          <td :class="`text-right font-bold py-5 text-lg`">
+          <td :class="`text-right font-bold py-4 text-lg`">
             <span v-if="balance?.secretAddress">
               <SecretAmount :secret-address="balance?.secretAddress" :amount="balance?.amount" />
             </span>

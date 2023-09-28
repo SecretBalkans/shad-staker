@@ -43,10 +43,8 @@ const stkdSecretPrice = computed(() => queryPrice.value);
 
 <style>
 .Box {
-  background-color: #fff8f9;
   justify-content: center;
-  border-bottom-width: 70%;
-  border-bottom: 3px solid #fff8f9;
+  border-bottom: 0.5px solid lightgray;
 }
 
 .Box div {
