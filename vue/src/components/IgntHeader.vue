@@ -1,6 +1,6 @@
 <template>
   <header class="flex px-5 pt-2">
-    <img src="ShadShade.png" width="80" alt="Logo" />
+    <img src="/ShadShade.png" width="80" alt="Logo" />
     <nav class="flex flex-1 justify-between">
       <ul class="flex items-center">
         <!-- <li class="text-3 px-4 font-normal" v-for="item in navItems" :key="item.label">
