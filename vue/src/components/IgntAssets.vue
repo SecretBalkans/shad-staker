@@ -88,7 +88,7 @@
     </table>
     <template v-if="isConnected && (balances.isLoading || !balances.assets.length)">
       <div role="status" class="w-100 animate-pulse flex flex-col">
-        <div class="flex flex-row justify-between py-7 items-center flex-1" v-for="n in 5" :key="'loading-skel-' + n">
+        <div class="flex flex-row justify-between py-5 items-center flex-1" v-for="n in 5" :key="'loading-skel-' + n">
           <div class="flex flex-1 items-center">
             <div class="w-8 h-8 mr-4 bg-gray-200 rounded-full dark:bg-gray-700"></div>
             <div class="h-6 bg-gray-200 rounded-lg dark:bg-gray-700 w-20"></div>
