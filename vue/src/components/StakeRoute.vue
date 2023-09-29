@@ -24,7 +24,7 @@
         <TxFsmOp
           :fsm="props.fsm"
           :stopped="stopped"
-          :op="`Stake from Osmosis (${tasks.ibc.amount} SCRT)`"
+          :op="`${stakeOpLabel} from Osmosis (${tasks.ibc.amount} SCRT)`"
           :tx-state-path="`stake.staking`"
           :job-state-path="`stake`"
         ></TxFsmOp>
@@ -53,7 +53,9 @@
           :tx-state-path="`stake.staking`"
           :job-state-path="`stake`"
           :stopped="stopped"
-          :op="`Stake after unwrap (${tasks.unwrap.amount} sSCRT)${tasks.ibc ? ` and IBC from Osmosis (${tasks.ibc.amount} SCRT)` : ''}`"
+          :op="`${stakeOpLabel} after unwrap (${tasks.unwrap.amount} sSCRT)${
+            tasks.ibc ? ` and IBC from Osmosis (${tasks.ibc.amount} SCRT)` : ''
+          }`"
         ></TxFsmOp>
         <RouteAsset :amount="tasks.stake.wait" :col-id="0" @update="updateMaxLengths" :max-len="maxLengths[0]"></RouteAsset>
       </span>
@@ -86,7 +88,7 @@
         :tx-state-path="`stake.staking`"
         :job-state-path="`stake`"
         :stopped="stopped"
-        :op="`Stake SCRT (${[
+        :op="`${stakeOpLabel} SCRT (${[
           tasks.base?.amount && `${tasks.base?.amount} on SCRT`,
           tasks.unwrap?.amount && `${tasks.unwrap?.amount} unwrapped sSCRT`,
           tasks.ibc?.amount && `${tasks.ibc?.amount} SCRT from Osmosis`,
@@ -95,9 +97,8 @@
           .join(' + ')})`"
       ></TxFsmOp>
       <RouteAsset :amount="tasks.stake.wait" :col-id="0" @update="updateMaxLengths" :max-len="maxLengths[0]"></RouteAsset>
-      <!-- {{jobStates}}
-      {{fsm.value}} -->
     </div>
+    {{tasks?.stake?.ops}} {{tasks?.stake?.ratio * 100}}
   </div>
 </template>
 
@@ -126,7 +127,13 @@ const tasks = computed(() => props.fsm.context.tasks);
 const jobStates = computed(() => props.fsm.context.jobStates);
 const amounts: any = { 0: {}, 1: {}, 2: {} };
 const maxLengths = ref({ 0: 90, 1: 90, 2: 90 } as any);
-
+const stakeOpLabel = computed(() =>
+  tasks.value.stake.ratio > 0 && tasks.value.stake.ratio < 1
+    ? `Swap/Stake ${(tasks.value.stake.ratio * 100).toFixed(0)}%`
+    : tasks.value.stake.ratio === 1
+    ? `Swap all`
+    : `Stake all`
+);
 const updateMaxLengths = ({ colId, amount, id }: any) => {
   if (amount) {
     amounts[colId] = {

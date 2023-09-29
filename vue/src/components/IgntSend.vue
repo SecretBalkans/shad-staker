@@ -22,6 +22,10 @@
         <div v-if="isTxSuccess" class="text-green-500">Staked successfully</div>
       </div>
     </div>
+    <div v-if="!marketData.stkdSecretInfo.value?.price || !swapLimit">
+      <IgntLoadingIcon class="inline-block mr-5" />Loading
+      {{ [!marketData.stkdSecretInfo.value?.price && `market`, !swapLimit && "swap"].filter((d) => !!d).join(" and ") }} data...
+    </div>
     <div v-if="hasAnyBalance && state.currentUIState === UI_STATE.STAKE">
       <IgntAmountSelect
         :mode="'stake'"
@@ -80,7 +84,7 @@
       <div class="flex align-center items-center justify-center">
         <IgntButton
           style="width: 110px"
-          :disabled="!ableToTx"
+          :disabled="false && !ableToTx"
           @click="sendTx"
           :busy="isTxOngoing"
           v-if="state.currentUIState === UI_STATE.STAKE"
@@ -99,7 +103,7 @@ import type { BalanceAmount } from "@/utils/interfaces";
 import { UI_STATE } from "@/utils/interfaces";
 import { computed, nextTick, onMounted, reactive, watch } from "vue";
 import BigNumber from "bignumber.js";
-import { IgntButton, IgntCard, IgntClearIcon, IgntWarningIcon } from "@ignt/vue-library";
+import { IgntButton, IgntCard, IgntClearIcon, IgntLoadingIcon, IgntWarningIcon } from "@ignt/vue-library";
 import IgntAmountSelect from "./IgntAmountSelect.vue";
 import { useWalletStore } from "@/stores/useWalletStore";
 import { envSecret } from "@/env";
@@ -109,6 +113,7 @@ import { useStakeFSM } from "@/def-composables/state/useStakeFSM";
 import { useMachine } from "@xstate/vue";
 import StakeRoute from "@/components/StakeRoute.vue";
 import { PERSISTENCE_HISTORY_KEY, PERSISTENCE_KEY } from "@/utils/const";
+import { useSwapLimit } from "@/def-composables/state/useSwapLimit";
 
 interface State {
   amounts: Array<BalanceAmount>;
@@ -135,6 +140,7 @@ const address = computed(() => walletStore.addresses[chainId]);
 const { balances } = useAssets();
 
 const marketData = computed(() => walletStore.secretJsClient && useSecretStakingMarketData(walletStore.secretJsClient));
+
 const stkdSecretInfo = computed(() => marketData.value?.stkdSecretInfo.value);
 const confirmCancel = (): void => {
   state.confirmCancel = true;
@@ -208,10 +214,14 @@ const sendTx = async (): Promise<void> => {
     state.currentUIState = UI_STATE.TX_ERROR;
   }
 };
-
+const swapLimit = computed(() => walletStore.secretJsClient && useSwapLimit(walletStore.secretJsClient).value);
 const handleTxAmountUpdate = (selected: BalanceAmount[]) => {
   state.amounts = selected;
-  stateMachine.send("INIT", { amounts: state.amounts, price: stkdSecretInfo.value?.price });
+  stateMachine.send("INIT", {
+    amounts: state.amounts,
+    price: stkdSecretInfo.value?.price,
+    swapLimit: swapLimit.value,
+  });
 };
 
 const parseAmount = (amount: string): BigNumber => {
@@ -220,7 +230,7 @@ const parseAmount = (amount: string): BigNumber => {
 const hasAnyBalance = computed<boolean>(
   () =>
     balances.value.assets.length &&
-    balances.value.assets.some((x: any) => parseAmount(x.amount ?? "0").isPositive() && stkdSecretInfo.value?.price)
+    balances.value.assets.some((x: any) => parseAmount(x.amount ?? "0").isPositive() && stkdSecretInfo.value?.price && swapLimit.value)
 );
 const isTxOngoing = computed<boolean>(() => {
   return state.currentUIState === UI_STATE.TX_SIGNING;

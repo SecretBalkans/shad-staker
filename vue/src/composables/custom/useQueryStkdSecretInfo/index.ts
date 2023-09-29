@@ -34,5 +34,16 @@ export default function useQueryStkdSecretInfo(client: any) {
     );
   };
 
-  return { QueryStkdSecretInfo, QueryStakingFees, QueryUnbonding };
+  const QueryStkdScrtPoolData = (options: any) => {
+    const key = { type: "QueryStkdScrtPool" };
+    return useQuery(
+      [key],
+      () => {
+        return client?.getStkdScrtPoolData().then((res: any) => res.get_pair_info);
+      },
+      options
+    );
+  };
+
+  return { QueryStkdSecretInfo, QueryStakingFees, QueryUnbonding, QueryStkdScrtPoolData };
 }
