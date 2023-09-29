@@ -1,10 +1,9 @@
 <template>
   <div>
-    <div class="Wrapper bg-gray-100 py-2 px-4 mt-5">
+    <div class="Wrapper py-2 px-4" style="display: flex; justify-content: center; align-items: center; font-style: italic">
       <div>
-        <div>Unbond amount in next batch: {{ stkdSecretInfo?.unbond_amount_of_next_batch / 10 ** 6 }} </div>
-        <div>Next batch estimate time: {{ new Date(stkdSecretInfo?.next_unbonding_batch_time * 1000).toDateString() }}
-        </div>
+        <div>Unbond amount in next batch: {{ stkdSecretInfo?.unbond_amount_of_next_batch / 10 ** 6 }}</div>
+        <div>Next batch estimate time: {{ new Date(stkdSecretInfo?.next_unbonding_batch_time * 1000).toDateString() }}</div>
       </div>
     </div>
     <div class="mt-4 flex justify-center text-red-900 text-xl">My Unbondings</div>
@@ -17,9 +16,7 @@
       </div>
     </div>
     <div class="mt-5 flex align-center items-center justify-center">
-      <IgntButton class="text-red-900" style="width: 100%; background-color: #8A3E40;" :disabled="!ableToTx"
-        @click="claim">Claim
-      </IgntButton>
+      <IgntButton style="width: 110px" type="primary" :disabled="!ableToTx" @click="claim">Claim </IgntButton>
     </div>
   </div>
 </template>
@@ -34,16 +31,15 @@ const unbondings = computed(() => marketData.value?.unbondings.value);
 const stkdSecretInfo = computed(() => marketData.value?.stkdSecretInfo.value);
 
 let validTxAmount = computed<boolean>(() => {
-  return unbondings.value?.unbondings?.some((u: any) => u.claimable_scrt === true)
+  return unbondings.value?.unbondings?.some((u: any) => u.claimable_scrt === true);
 });
 
 let ableToTx = computed<boolean>(() => validTxAmount.value);
 
 const claim = async () => {
-  const result = await walletStore.secretJsClient?.executeStkdSecretClaim()
-  console.log("Executed claim...: ", result)
-}
-
+  const result = await walletStore.secretJsClient?.executeStkdSecretClaim();
+  console.log("Executed claim...: ", result);
+};
 </script>
 
 <style>
@@ -57,10 +53,8 @@ const claim = async () => {
 }
 
 .Box {
-  background-color: #fff8f9;
   justify-content: center;
   margin: 10px;
-  /* border: 2px solid #A71C24; */
 }
 
 .Box div {

@@ -1,9 +1,13 @@
 <template>
-  <IgntTabs :tabHeaderClasses="['text-3xl', 'font-semibold', 'p-0', 'm-0', 'mb-2.5', 'flex-1']" :tabLinkClasses="['pr-4']"
-    :inactiveLinkClasses="['text-gray-400']" :activeLinkClasses="['text-black']">
+  <IgntTabs
+    :tabHeaderClasses="['text-2xl', 'font-semibold', 'p-0', 'm-0', 'mb-2.5', 'flex-1']"
+    :tabLinkClasses="['pr-4']"
+    :inactiveLinkClasses="['text-gray-400']"
+    :activeLinkClasses="['text-black']"
+  >
     <div class="" tabTitle="Stake">
       <IgntSend v-if="isEnabled" />
-      <MarketStatistics />
+      <MarketStatistics v-if="isEnabled" />
     </div>
     <div class="" tabTitle="Withdraw">
       <IgntWithdraw v-if="isEnabled" />
@@ -24,5 +28,7 @@ import UnbondingsInfo from "./UnbondingsInfo.vue";
 import IgntWithdraw from "./IgntWithdraw.vue";
 
 const walletProvider = useWalletStore();
-const isEnabled = computed(() => !!walletProvider.secretAddress);
+const isEnabled = computed(
+  () => !!walletProvider.secretAddress && !!walletProvider.secretJsClient && !!walletProvider.osmoClient && !!walletProvider.secretClient
+);
 </script>

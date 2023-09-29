@@ -1,6 +1,6 @@
 <template>
-  <header class="flex p-5">
-    <img src="ShadShade.png" style="width: 150px; margin-top: -30px;" alt="Logo">
+  <header class="flex px-5 pt-2">
+    <img src="/ShadShade.png" width="80" alt="Logo" />
     <nav class="flex flex-1 justify-between">
       <ul class="flex items-center">
         <!-- <li class="text-3 px-4 font-normal" v-for="item in navItems" :key="item.label">
@@ -15,9 +15,7 @@
 </template>
 <script setup lang="ts">
 import { ref, type PropType } from "vue";
-import { IgntLink } from "@ignt/vue-library";
 import IgntAcc from "@/components/IgntAcc.vue";
-import { IgntLogo } from "@ignt/vue-library";
 
 type MenuItem = {
   label: string;

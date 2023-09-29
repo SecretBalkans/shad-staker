@@ -119,7 +119,9 @@ export const useWalletStore = defineStore("wallet", {
                 await client.useKeplr();
                 if (client.signer) {
                   const [{ address: rawAddress }] = await client.signer.getAccounts();
-                  if (chainId == envSecret.chainId) this.secretJsClient = useSecretClient(rawAddress, window.keplr.getOfflineSignerOnlyAmino(chainId), envSecret);
+                  if (chainId == envSecret.chainId) {
+                    this.secretJsClient = useSecretClient(rawAddress, window.keplr.getOfflineSignerOnlyAmino(chainId), envSecret);
+                  }
                   this.addresses[chainId] = rawAddress;
                   console.log(`Connected ${chainId}`);
                   // wallet.accounts.push({ address: rawAddress, pathIncrement: null });
