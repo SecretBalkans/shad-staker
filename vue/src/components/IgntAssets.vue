@@ -50,7 +50,6 @@
               :key="balance?.denom"
             />
             <IgntDenom
-              class="pl-4"
               :chain-id="balance?.chainId"
               :denom="balance?.denom ?? ''"
               :key="balance?.denom"
@@ -70,7 +69,7 @@
               :shorten="false"
             />
           </td>
-          <td :class="`text-right font-bold py-4 text-lg pl-4`">
+          <td :class="`text-right font-bold py-4 text-lg`">
             <span v-if="balance?.secretAddress">
               <SecretAmount :secret-address="balance?.secretAddress" :amount="balance?.amount" />
             </span>
@@ -143,10 +142,10 @@ let { balances } = useAssets();
 
 const filteredBalanceList = computed(() => {
   if (!state.value.searchQuery) {
-    return balances.value.assets.slice(0, state.value.displayLimit || 100);
+    return balances.value.assets.slice(0, state.value.displayLimit);
   }
 
-  return balances.value.assets.filter((item: any) => {
+  return balances.value.assets.filter((item) => {
     if (item.denom) {
       // Ugly as all hell hack.
       // This only works because function is called on user input and we're 99.999999% certain
