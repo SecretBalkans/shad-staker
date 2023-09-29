@@ -1,7 +1,8 @@
 <template>
   <div>
-    <div class="flex justify-center text-red-900 text-xl">stkd-SCRT Market Statistics</div>
-    <div class="flex-col mt-1">
+    <div class="flex justify-center text-gray-700 text-xl mb-1">stkd-SCRT Market Statistics</div>
+    <div v-if="!stkdSecretInfo || !stkdSecretPrice" class="mx-auto p-28"><IgntLoadingIcon class="inline-block mr-5" />Loading ...</div>
+    <div class="flex-col mt-1" v-if="stkdSecretInfo && stkdSecretPrice">
       <!-- <div class="Box">
         <div style="font-weight: 600">stkd-SCRT Exchange Rate</div>
         <div>{{ stkdSecretInfo?.price ? stkdSecretInfo.price / 10 ** 6 : "" }} SCRT/stkd-SCRT</div>
@@ -34,6 +35,7 @@ import { useSecretStakingMarketData } from "@/def-composables/useSecretStakingMa
 import { useStkdSecretPrice } from "@/def-composables/useStkdSecretPrice";
 import { useWalletStore } from "@/stores/useWalletStore";
 import { computed } from "vue";
+import { IgntLoadingIcon } from "@ignt/vue-library";
 const walletStore = useWalletStore();
 const queryPrice = useStkdSecretPrice();
 const marketData = computed(() => walletStore.secretJsClient && useSecretStakingMarketData(walletStore.secretJsClient));

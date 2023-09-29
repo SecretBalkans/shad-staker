@@ -483,7 +483,7 @@ function txMachine(contextTaskKey: string, taskFn: (task: any) => Promise<string
               assign({
                 jobStates: (context: any, event: any) =>
                   addJobStateData(context, contextTaskKey, "signing", {
-                    error: event.data.message || event.data,
+                    error: event.data?.message || event.data,
                   }),
               }),
             ],
@@ -510,7 +510,7 @@ function txMachine(contextTaskKey: string, taskFn: (task: any) => Promise<string
               assign({
                 jobStates: (context: any, event: any) =>
                   addJobStateData(context, contextTaskKey, "initialBalance", {
-                    error: event.data.message || event.data,
+                    error: event.data?.message || event.data,
                   }),
               }),
             ],
@@ -538,7 +538,7 @@ function txMachine(contextTaskKey: string, taskFn: (task: any) => Promise<string
               assign({
                 jobStates: (context: any, event: any) =>
                   addJobStateData(context, contextTaskKey, "txBroadcast", {
-                    error: event.data.message || event.data,
+                    error: event.data?.message || event.data,
                   }),
               }),
             ],
@@ -573,7 +573,7 @@ function txMachine(contextTaskKey: string, taskFn: (task: any) => Promise<string
               assign({
                 jobStates: (context: any, event: any) =>
                   addJobStateData(context, contextTaskKey, "txWait", {
-                    error: event.data.message || event.data,
+                    error: event.data?.message || event.data,
                   }),
               }),
             ],
@@ -685,7 +685,7 @@ export const useStakeFSM = () => {
                           ...context.jobStates,
                           stake: {
                             type: "error",
-                            error: event.data.message || event.data,
+                            error: event.data?.message || event.data,
                           },
                         };
                       },
