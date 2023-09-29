@@ -25,8 +25,9 @@ Steps of route calculation:
 - executing atomic operations (swap, ibc, unwrap, wait)
 
 ## Usage
-Dapp is hosted [here](http://0sjjc1a7t593p9jnd99ffbvvho.ingress.akashprovid.com/) <br/>
+Dapp is hosted [here](http://1ffhjn0ihhf554e73ndatrfras.ingress.akashprovid.com/) <br/>
 If you want to run locally, follow instruction in [Vue repositiory](https://github.com/SecretBalkans/akash-frontend/tree/main/vue)
 
 
 ## Demo
+Demo video is hosted [here](https://youtu.be/E0Iax3bqhG4)
