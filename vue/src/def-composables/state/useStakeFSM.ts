@@ -11,6 +11,14 @@ import { BroadcastTxError, SigningStargateClient, TimeoutError } from "@cosmjs/s
 import { Registry } from "@cosmjs/proto-signing";
 import { TxRaw } from "example-client-ts/cosmos.tx.v1beta1";
 import type { TxResponse } from "secretjs";
+import { Service as TxService } from "secretjs/src/grpc_gateway/cosmos/tx/v1beta1/service.pb";
+import type { TxResponse as TxResponsePb } from "secretjs/src/grpc_gateway/cosmos/base/abci/v1beta1/abci.pb";
+import type { Tx as TxPb } from "secretjs/src/grpc_gateway/cosmos/tx/v1beta1/tx.pb";
+import { fromBase64, fromHex, fromUtf8 } from "@cosmjs/encoding";
+import { TxMsgData } from "secretjs/src/protobuf/cosmos/base/abci/v1beta1/abci";
+import { MsgExecuteContractResponse, MsgInstantiateContractResponse } from "secretjs/src/protobuf/secret/compute/v1beta1/msg";
+import type { AnyJson, ArrayLog, JsonLog } from "secretjs/src/secret_network_client";
+import type { V1Beta1TxResponse } from "example-client-ts/cosmos.tx.v1beta1/rest";
 
 function getTimeoutTimestamp() {
   const timeoutInMinutes = 15;
@@ -25,34 +33,50 @@ const secretGasPrice = 0.1;
 
 async function broadcast(message: string | Uint8Array | any, task: any): Promise<string> {
   const walletStore = useWalletStore();
-  if (typeof message === "string") {
-    const response: TxResponse = await walletStore.secretJsClient!.broadcastSignedMessage(message);
-    return response.transactionHash;
-  } else {
-    const activeClient = walletStore.activeClients[task.chainId];
-    const client = await SigningStargateClient.connectWithSigner(activeClient.env.rpcURL, activeClient.signer!, {
-      registry: new Registry(activeClient.registry),
-      prefix: activeClient.env.prefix,
-    });
+  let retries = 8;
+  let waitTime = 150;
+  const MAX_WAIT_TIME = 3000;
+  let client;
+  let lastErr: Error;
+
+  do {
     try {
-      // deserialized message is { 0:...,1:..}
-      if (!(message instanceof Uint8Array)) {
-        const array: number[] = [];
-        Object.values(message).forEach((val: any) => array.push(+val));
-        message = Uint8Array.from(array);
+      if (typeof message === "string") {
+        const response: TxResponse = await walletStore.secretJsClient!.broadcastSignedMessage(message);
+        return response.transactionHash;
+      } else {
+        const activeClient = walletStore.activeClients[task.chainId];
+        client =
+          client ||
+          (await SigningStargateClient.connectWithSigner(activeClient.env.rpcURL, activeClient.signer!, {
+            registry: new Registry(activeClient.registry),
+            prefix: activeClient.env.prefix,
+          }));
+        // deserialized message is { 0:...,1:..}
+        if (!(message instanceof Uint8Array)) {
+          const array: number[] = [];
+          Object.values(message).forEach((val: any) => array.push(+val));
+          message = Uint8Array.from(array);
+        }
+        const response = await client.broadcastTx(message, 0, 1000); // will never poll
+        return response.transactionHash;
       }
-      const response = await client.broadcastTx(message, 0, 1000);
-      return response.transactionHash;
-    } catch (e) {
+    } catch (e: any) {
       if (e instanceof TimeoutError) {
         return e.txId;
       } else if (e instanceof BroadcastTxError) {
-        throw new Error(`Error broadcasting tx. code: ${e.code}/log: ${e.log}`);
+        throw new Error(`Error broadcasting tx. code: ${e.code}/ log: ${e.log}`);
       } else {
-        throw e;
+        if (!e.message.includes("fetch")) {
+          // continue on fetch errors with exponential back-off retry
+          throw e;
+        }
+        lastErr = e;
       }
     }
-  }
+    await new Promise((resolve) => setTimeout(resolve, Math.min(MAX_WAIT_TIME, (waitTime *= 2))));
+  } while (retries-- > 0);
+  throw lastErr;
 }
 
 async function ibcFn(task: any): Promise<Uint8Array> {
@@ -97,6 +121,252 @@ async function ibcFn(task: any): Promise<Uint8Array> {
     ""
   );
   return TxRaw.encode(txRaw).finish();
+}
+
+async function waitTxComplete(txHash: string, task: any) {
+  const store = useWalletStore();
+  const enigmaUtils = window.keplr.getEnigmaUtils(envSecret.chainId);
+  let timeout = task.wait.waitSec;
+  let data;
+  do {
+    try {
+      const txQueryResult = await store.activeClients[task.chainId].CosmosTxV1Beta1.query.serviceGetTx(txHash);
+      data = txQueryResult.data;
+      if (data) {
+        break;
+      }
+      // eslint-disable-next-line no-empty
+    } catch (e) {}
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+  } while (--timeout > 0);
+  const response = data?.tx_response;
+  if (!response || response?.code) {
+    return {
+      success: false,
+      timeout: !response ? `No tx response in ${task.wait.waitSec} seconds` : null,
+      tx: response,
+    };
+  }
+  if (task.chainId !== task.wait.chainId) {
+    console.log("IBC", response.logs);
+    const channel: any = (data?.tx?.body?.messages?.[0] as any)?.source_channel;
+    const packetSequence: any = response.logs?.[0]?.events
+      ?.find((ev: any) => ev?.type === "send_packet")
+      ?.attributes?.find((a: any) => a.key === "packet_sequence")?.value;
+    const isDoneObject = { isDone: false };
+    const result = await Promise.race([
+      waitForIbcResponse("acknowledge", packetSequence, channel, enigmaUtils, isDoneObject),
+      waitForIbcResponse("timeout", packetSequence, channel, enigmaUtils, isDoneObject),
+    ]);
+    return {
+      timeout: result?.type === "timeout" ? `Timeout IBC transaction: ${task.wait.waitSec}sec` : null,
+      success: result?.type === "acknowledge",
+      tx: result?.tx,
+    };
+  } else {
+    const tx = await decodeTxResponse(response as any, enigmaUtils);
+    return {
+      success: !tx.code,
+      tx,
+    };
+  }
+}
+
+async function decodeTxResponse(txResp: TxResponsePb, enigmaUtils: any): Promise<TxResponse> {
+  const nonces: any = [];
+
+  const tx = txResp.tx as TxPb;
+
+  // Decoded input tx messages
+  for (let i = 0; !isNaN(Number(tx?.body?.messages?.length)) && i < Number(tx?.body?.messages?.length); i++) {
+    const msg: AnyJson = tx.body!.messages![i];
+
+    // Check if the message needs decryption
+    let contractInputMsgFieldName = "";
+    if (msg["@type"] === "/secret.compute.v1beta1.MsgInstantiateContract") {
+      contractInputMsgFieldName = "init_msg";
+    } else if (msg["@type"] === "/secret.compute.v1beta1.MsgExecuteContract") {
+      contractInputMsgFieldName = "msg";
+    }
+
+    if (contractInputMsgFieldName !== "") {
+      // Encrypted, try to decrypt
+      try {
+        const contractInputMsgBytes = fromBase64(msg[contractInputMsgFieldName]);
+
+        const nonce = contractInputMsgBytes.slice(0, 32);
+        const ciphertext = contractInputMsgBytes.slice(64);
+
+        const plaintext = await enigmaUtils.decrypt(ciphertext, nonce);
+        msg[contractInputMsgFieldName] = JSON.parse(
+          fromUtf8(plaintext).slice(64) // first 64 chars is the codeHash as a hex string
+        );
+
+        nonces[i] = nonce; // Fill nonces array to later use it in output decryption
+      } catch (decryptionError) {
+        // Not encrypted or can't decrypt because not original sender
+      }
+    }
+
+    tx.body!.messages![i] = msg;
+  }
+
+  let rawLog: string = txResp.raw_log!;
+  let jsonLog: JsonLog | undefined;
+  let arrayLog: ArrayLog | undefined;
+  if (txResp.code === 0 && rawLog !== "") {
+    jsonLog = JSON.parse(rawLog) as JsonLog;
+
+    arrayLog = [];
+    for (let msgIndex = 0; msgIndex < jsonLog.length; msgIndex++) {
+      if (jsonLog[msgIndex].msg_index === undefined) {
+        jsonLog[msgIndex].msg_index = msgIndex;
+        // See https://github.com/cosmos/cosmos-sdk/pull/11147
+      }
+
+      const log = jsonLog[msgIndex];
+      for (const event of log.events) {
+        for (const attr of event.attributes) {
+          // Try to decrypt
+          if (event.type === "wasm") {
+            const nonce = nonces[msgIndex];
+            if (nonce && nonce.length === 32) {
+              try {
+                attr.key = fromUtf8(await enigmaUtils.decrypt(fromBase64(attr.key), nonce)).trim();
+                // eslint-disable-next-line no-empty
+              } catch (e) {}
+              try {
+                attr.value = fromUtf8(await enigmaUtils.decrypt(fromBase64(attr.value), nonce)).trim();
+                // eslint-disable-next-line no-empty
+              } catch (e) {}
+            }
+          }
+
+          arrayLog.push({
+            msg: msgIndex,
+            type: event.type,
+            key: attr.key,
+            value: attr.value,
+          });
+        }
+      }
+    }
+  } else if (txResp.code !== 0 && rawLog !== "") {
+    try {
+      const errorMessageRgx = /; message index: (\d+):.+?encrypted: (.+?): (?:instantiate|execute|query|reply to) contract failed/;
+      const rgxMatches = errorMessageRgx.exec(rawLog);
+      if (rgxMatches?.length === 3) {
+        const encryptedError = fromBase64(rgxMatches[2]);
+        const msgIndex = Number(rgxMatches[1]);
+
+        const decryptedBase64Error = await enigmaUtils.decrypt(encryptedError, nonces[msgIndex]);
+
+        const decryptedError = fromUtf8(decryptedBase64Error);
+
+        rawLog = rawLog.replace(`encrypted: ${rgxMatches[2]}`, decryptedError);
+
+        try {
+          jsonLog = JSON.parse(decryptedError);
+          // eslint-disable-next-line no-empty
+        } catch (e) {}
+      }
+    } catch (decryptionError) {
+      // Not encrypted or can't decrypt because not original sender
+    }
+  }
+
+  const txMsgData = TxMsgData.decode(fromHex(txResp.data!));
+  const data = new Array<Uint8Array>(txMsgData.data.length);
+
+  for (let msgIndex = 0; msgIndex < txMsgData.data.length; msgIndex++) {
+    data[msgIndex] = txMsgData.data[msgIndex].data;
+
+    const nonce = nonces[msgIndex];
+    if (nonce && nonce.length === 32) {
+      // Check if the output data needs decryption
+
+      try {
+        const { "@type": type_url } = tx.body!.messages![msgIndex] as AnyJson;
+
+        if (type_url === "/secret.compute.v1beta1.MsgInstantiateContract") {
+          const decoded = MsgInstantiateContractResponse.decode(txMsgData.data[msgIndex].data);
+          const decrypted = fromBase64(fromUtf8(await enigmaUtils.decrypt(decoded.data, nonce)));
+          data[msgIndex] = MsgInstantiateContractResponse.encode({
+            address: decoded.address,
+            data: decrypted,
+          }).finish();
+        } else if (type_url === "/secret.compute.v1beta1.MsgExecuteContract") {
+          const decoded = MsgExecuteContractResponse.decode(txMsgData.data[msgIndex].data);
+          const decrypted = fromBase64(fromUtf8(await enigmaUtils.decrypt(decoded.data, nonce)));
+          data[msgIndex] = MsgExecuteContractResponse.encode({
+            data: decrypted,
+          }).finish();
+        }
+      } catch (decryptionError) {
+        // Not encrypted or can't decrypt because not original sender
+      }
+    }
+  }
+
+  return {
+    height: Number(txResp.height),
+    timestamp: txResp.timestamp!,
+    transactionHash: txResp.txhash!,
+    code: txResp.code!,
+    codespace: txResp.codespace!,
+    info: txResp.info!,
+    tx,
+    rawLog,
+    jsonLog,
+    arrayLog,
+    events: txResp.events!,
+    data,
+    gasUsed: Number(txResp.gas_used),
+    gasWanted: Number(txResp.gas_wanted),
+    ibcResponses: [],
+  };
+}
+async function waitForIbcResponse(
+  txType: any,
+  packetSequence: any,
+  packetSrcChannel: any,
+  enigmaUtils: any,
+  isDoneObject: { isDone: boolean }
+) {
+  // an IBC transfer
+  const query = [`${txType}_packet.packet_src_channel='${packetSrcChannel}'`, `${txType}_packet.packet_sequence='${packetSequence}'`];
+  let tries = 120;
+  while (tries > 0 && !isDoneObject.isDone) {
+    try {
+      const { tx_responses } = await TxService.GetTxsEvent(
+        {
+          events: query,
+        },
+        {
+          pathPrefix: envOsmosis.apiURL,
+        }
+      );
+      const txs = await decodeTxResponses(tx_responses || [], enigmaUtils);
+      const ibcRespTx = txs.find((tx) => tx.code === 0);
+
+      if (ibcRespTx) {
+        isDoneObject.isDone = true;
+        return {
+          type: txType,
+          tx: ibcRespTx,
+        };
+      }
+      // eslint-disable-next-line no-empty
+    } catch (e) {}
+
+    tries--;
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  return null;
+}
+
+async function decodeTxResponses(txResponses: TxResponsePb[], enigmaUtils: any): Promise<TxResponse[]> {
+  return await Promise.all(txResponses.map((x) => decodeTxResponse(x, enigmaUtils)));
 }
 
 async function balanceWaitTask(startAmount: any, task: any) {
@@ -145,27 +415,22 @@ async function unwrapFn(task: any): Promise<string> {
 
 async function stakeFn(task: any): Promise<string> {
   const walletStore = useWalletStore();
-  try {
-    return await walletStore.secretJsClient!.signContractCall(
-      stkdSCRTContractAddress,
+  return await walletStore.secretJsClient!.signContractCall(
+    stkdSCRTContractAddress,
+    {
+      stake: {},
+    },
+    secretGasPrice,
+    +IBCTxGasStakeGas,
+    [
       {
-        stake: {},
+        amount: BigNumber(task.amount)
+          .multipliedBy(10 ** 6)
+          .toFixed(0),
+        denom: "uscrt",
       },
-      secretGasPrice,
-      +IBCTxGasStakeGas,
-      [
-        {
-          amount: BigNumber(task.amount)
-            .multipliedBy(10 ** 6)
-            .toFixed(0),
-          denom: "uscrt",
-        },
-      ]
-    );
-  } catch (e) {
-    console.log(e);
-    throw e;
-  }
+    ]
+  );
 }
 
 function addJobStateData(context: any, contextTaskKey: string, eventType: string, eventData: any) {
@@ -218,7 +483,7 @@ function txMachine(contextTaskKey: string, taskFn: (task: any) => Promise<string
               assign({
                 jobStates: (context: any, event: any) =>
                   addJobStateData(context, contextTaskKey, "signing", {
-                    error: event.data,
+                    error: event.data.message || event.data,
                   }),
               }),
             ],
@@ -245,7 +510,7 @@ function txMachine(contextTaskKey: string, taskFn: (task: any) => Promise<string
               assign({
                 jobStates: (context: any, event: any) =>
                   addJobStateData(context, contextTaskKey, "initialBalance", {
-                    error: event.data,
+                    error: event.data.message || event.data,
                   }),
               }),
             ],
@@ -273,7 +538,7 @@ function txMachine(contextTaskKey: string, taskFn: (task: any) => Promise<string
               assign({
                 jobStates: (context: any, event: any) =>
                   addJobStateData(context, contextTaskKey, "txBroadcast", {
-                    error: event.data,
+                    error: event.data.message || event.data,
                   }),
               }),
             ],
@@ -282,15 +547,22 @@ function txMachine(contextTaskKey: string, taskFn: (task: any) => Promise<string
       },
       txWait: {
         invoke: {
-          src: (context: any) => balanceWaitTask(context.jobStates[contextTaskKey].startAmount, context.tasks[contextTaskKey].wait),
+          src: (context: any) =>
+            waitTxComplete(context.jobStates[contextTaskKey].txHash, context.tasks[contextTaskKey]).then((d) => {
+              if (d.success) {
+                return d.tx;
+              } else {
+                throw new Error(d.timeout ? d.timeout : (d.tx as V1Beta1TxResponse)?.raw_log || (d.tx as TxResponse)?.rawLog);
+              }
+            }),
           onDone: {
             target: "success",
             actions: [
               assign({
                 jobStates: (context: any, event: any) =>
-                  addJobStateData(context, contextTaskKey, "balanceWait", {
+                  addJobStateData(context, contextTaskKey, "txWait", {
                     finished: true,
-                    result: event.data,
+                    result: event.tx,
                   }),
               }),
             ],
@@ -300,8 +572,8 @@ function txMachine(contextTaskKey: string, taskFn: (task: any) => Promise<string
             actions: [
               assign({
                 jobStates: (context: any, event: any) =>
-                  addJobStateData(context, contextTaskKey, "balanceWait", {
-                    error: event.data,
+                  addJobStateData(context, contextTaskKey, "txWait", {
+                    error: event.data.message || event.data,
                   }),
               }),
             ],
@@ -409,12 +681,11 @@ export const useStakeFSM = () => {
                   entry: [
                     assign({
                       jobStates: (context: any, event: any) => {
-                        console.log(event);
                         return {
                           ...context.jobStates,
                           stake: {
                             type: "error",
-                            data: event.data,
+                            error: event.data.message || event.data,
                           },
                         };
                       },
@@ -456,16 +727,13 @@ export const useStakeFSM = () => {
     {
       guards: {
         areAllTxFinished: (context) => {
-          const areAllTxFinished =
+          return (
             (!context.tasks.ibc || (context.tasks.ibc && context.jobStates.ibc?.type === "finished")) &&
-            (!context.tasks.unwrap || (context.tasks.unwrap && context.jobStates.unwrap?.type === "finished"));
-          console.log({ areAllTxFinished });
-          return areAllTxFinished;
+            (!context.tasks.unwrap || (context.tasks.unwrap && context.jobStates.unwrap?.type === "finished"))
+          );
         },
         isSomeTxFail: (context) => {
-          const isSomeTxFail = !!context.jobStates.ibc?.error || !!context.jobStates.unwrap?.error;
-          console.log({ isSomeTxFail });
-          return isSomeTxFail;
+          return !!context.jobStates.ibc?.error || !!context.jobStates.unwrap?.error;
         },
       },
     }

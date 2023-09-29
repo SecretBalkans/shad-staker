@@ -13,13 +13,9 @@
     </div>
     <div v-if="!isLoading" class="max-h-80 h-full overflow-auto w-full">
       <div class="flex flex-col mt-1.5 pb-3.5" v-for="fsm in history" :key="fsm.time">
-        <span
-          class="text-xs pb-1 pt-1 w-fit px-4"
-          style="margin: 0 auto; border-bottom: 1px solid lightgray; border-top: 1px solid lightgray"
-          >{{ new Date(fsm.time).toLocaleString().replace(",", " ") }}</span
-        >
-        <span class="text-xs pt-1.5 flex-row justify-center items-center" style="margin: 0 auto">
-          <StakeRoute :fsm="fsm.fsm" :stopped="true"></StakeRoute>
+        <span class="text-xs pb-1 pt-1 w-fit px-4" style="margin: 0 auto">{{ new Date(fsm.time).toLocaleString().replace(",", " ") }}</span>
+        <span class="text-xs flex-row justify-center items-center mx-auto">
+          <StakeRoute :fsm="fsm.fsm" :stopped="true" :colored="true"></StakeRoute>
         </span>
       </div>
     </div>
@@ -35,13 +31,15 @@ const isLoading = ref(true);
 const history = ref([]);
 const loadHistory = () => {
   try {
-    history.value = JSON.parse(localStorage.getItem(PERSISTENCE_HISTORY_KEY) || "[]").map((persisted: any) => {
-      let machine = State.create(persisted.fsm);
-      return {
-        fsm: machine,
-        time: persisted.time,
-      };
-    });
+    history.value = JSON.parse(localStorage.getItem(PERSISTENCE_HISTORY_KEY) || "[]")
+      .map((persisted: any) => {
+        let machine = State.create(persisted.fsm);
+        return {
+          fsm: machine,
+          time: persisted.time,
+        };
+      })
+      .reverse();
   } catch (e) {
     console.error("Error loading history", e);
   }
@@ -56,4 +54,8 @@ onBeforeMount(() => {
 });
 </script>
 
-<style scoped></style>
+<style scoped>
+a {
+  color: rgb(255, 215, 0);
+}
+</style>

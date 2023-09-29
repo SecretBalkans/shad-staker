@@ -5,10 +5,21 @@
         {{
           state.currentUIState === UI_STATE.STAKE
             ? `Liquid stake SCRT from Osmosis or Secret chain`
-            : isTxError || isTxSuccess
-            ? `Finished.`
+            : isTxError
+            ? "Finished with an error:"
+            : isTxSuccess
+            ? `Finished:`
             : `Executing...`
         }}
+      </div>
+      <div class="text-xs italic mt-2 max-w-fit">
+        <div v-if="isTxError" class="text-red-500">
+          {{ fsm.context.jobStates?.stake?.error }}
+          <div title="Click tx link in route for more details!" class="mt-1">
+            <ignt-warning-icon></ignt-warning-icon>
+          </div>
+        </div>
+        <div v-if="isTxSuccess" class="text-green-500">Staked successfully</div>
       </div>
     </div>
     <div v-if="hasAnyBalance && state.currentUIState === UI_STATE.STAKE">
@@ -20,8 +31,8 @@
         @update="handleTxAmountUpdate"
       />
     </div>
-    <div v-if="state.amounts[0] || state.currentUIState === UI_STATE.TX_SIGNING || isTxSuccess || isTxError">
-      <div class="text-xs pb-1 pt-5 text-gray-600" v-if="fsm.context.tasks.stake?.wait?.amount">
+    <div class="w-fit pt-5" v-if="state.amounts[0] || state.currentUIState === UI_STATE.TX_SIGNING || isTxSuccess || isTxError">
+      <div class="text-xs pb-1 text-gray-600" v-if="fsm.context.tasks.stake?.wait?.amount">
         Route for
         {{
           `${
@@ -32,12 +43,11 @@
           }`
         }}{{ fsm.context.tasks.stake?.wait?.amount }} stkd-SCRT
       </div>
-      <StakeRoute :fsm="fsm"></StakeRoute>
-    </div>
-    <div>
-      <div v-if="isTxError" class="flex items-center justify-center text-xs text-red-500 italic mt-2">Error submitting Tx</div>
-
-      <div v-if="isTxSuccess" class="flex items-center justify-center text-xxs text-green-500 italic mt-2">Staked successfully</div>
+      <StakeRoute
+        class="pl-5 pr-20"
+        :fsm="fsm"
+        :colored="state.currentUIState !== UI_STATE.TX_SIGNING && fsm.value !== 'idle'"
+      ></StakeRoute>
     </div>
     <div style="width: 100%; height: 24px" />
     <div>
@@ -89,7 +99,7 @@ import type { BalanceAmount } from "@/utils/interfaces";
 import { UI_STATE } from "@/utils/interfaces";
 import { computed, nextTick, onMounted, reactive, watch } from "vue";
 import BigNumber from "bignumber.js";
-import { IgntButton, IgntCard, IgntClearIcon } from "@ignt/vue-library";
+import { IgntButton, IgntCard, IgntClearIcon, IgntWarningIcon } from "@ignt/vue-library";
 import IgntAmountSelect from "./IgntAmountSelect.vue";
 import { useWalletStore } from "@/stores/useWalletStore";
 import { envSecret } from "@/env";
