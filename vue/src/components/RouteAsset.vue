@@ -18,6 +18,7 @@ import { type BalanceAmount } from "@/utils/interfaces";
 import { onBeforeUnmount, onMounted, PropType, watch } from "vue";
 import IgntDenom from "@/components/IgntDenom.vue";
 import SelectableLabel from "@/components/pretty/SelectableLabel.vue";
+import {uuidv4} from "@/utils/uuid";
 
 const props = defineProps({
   amount: {
@@ -30,7 +31,7 @@ const props = defineProps({
     type: Number,
   },
 });
-const id = crypto.randomUUID();
+const id = uuidv4();
 const emit = defineEmits(["update"]);
 watch(
   () => "" + props.amount?.amount,

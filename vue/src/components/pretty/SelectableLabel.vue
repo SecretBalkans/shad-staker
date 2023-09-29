@@ -30,6 +30,7 @@
 <script lang="ts" setup>
 import { computed, ref } from "vue";
 import { getAutoWidth, prettyNumber } from "@/utils/prettyNumber";
+import { uuidv4 } from "@/utils/uuid";
 
 function selectFn(text: any) {
   return function (this: any, event: any) {
@@ -61,7 +62,8 @@ const formatted = computed(() => {
   return props.prettyNumber ? prettyNumber(+props.text, +props.prettyNumber!) : "" + props.text;
 });
 // const select = ref(selectFn(props.text));
-const id = ref<string>("" + crypto.randomUUID());
+
+const id = ref<string>("" + uuidv4());
 const autoWidth = computed(() => {
   return getAutoWidth(formatted.value);
 });
