@@ -3,7 +3,7 @@ version: "2.0"
 
 services:
   web:
-    image: hadzija7/secret-akash
+    image: hadzija7/shad-staker:3
     expose:
       - port: 4173
         as: 80
@@ -19,7 +19,7 @@ profiles:
         memory:
           size: 1Gi
         storage:
-          size: 2Gi
+          size: 1.5Gi
   placement:
     dcloud:
       pricing:
