@@ -32,6 +32,7 @@ function getTimeoutTimestamp() {
 
 const IBCTxGasStakeGas = "" + 350_000;
 const secretGasPrice = 0.1;
+const SWAP_GAS = 2_275_000;
 
 async function broadcast(message: string | Uint8Array | any, task: any): Promise<string> {
   const walletStore = useWalletStore();
@@ -471,7 +472,7 @@ async function stakeFn(task: any): Promise<string> {
       );
       gas += 60_000;
     }
-    gas += 2_275_000;
+    gas += SWAP_GAS;
     swapMsgs.push(
       new MsgExecuteContract({
         contract_address: sSCRTContractAddress,
@@ -831,51 +832,82 @@ const id = (i: BalanceAmount) => i;
 const stake = (b: BalanceAmount, price: any, swapLimit: number) => {
   let ops;
   let stkdSCRTExpected;
-  let ratio = 0;
+  const stkdSCRTGasFee = BigNumber(SWAP_GAS)
+    .dividedBy(10 ** 6)
+    .times(secretGasPrice)
+    .dividedBy(+price / 10 ** 6)
+    .multipliedBy(1 - 0.2 / 100);
   const swapFn = useStkdScrtSwapPoolData().swapSCRT;
-  if (BigNumber(b.amount).isGreaterThan(swapLimit)) {
-    const step = 1 / 7;
-    const max = 1;
-    let bestLimitRatio = 0;
-    let bestOutcome: BigNumber | null = null;
-    for (let i = 0; i < max / step; i++) {
-      const currentRatio = i * step;
-      const swapChoice = swapLimit * currentRatio;
-      const stakeAmount = BigNumber(BigNumber(b.amount).toFixed(6)).minus(swapChoice);
-      const expectedResult = BigNumber(stakeAmount)
-        .dividedBy(+price / 10 ** 6)
-        .multipliedBy(1 - 0.2 / 100)
-        .plus(swapFn(BigNumber(swapChoice)));
-      const outcome = BigNumber(b.amount).dividedBy(expectedResult);
-      const diff = BigNumber(outcome).minus(price / 10 ** 6);
-      if (!diff.isNaN() && (!bestOutcome || diff.isLessThan(bestOutcome))) {
-        bestLimitRatio = currentRatio;
-        bestOutcome = diff;
-      } else if (!diff.isNaN()) {
-        break;
+  let ratio;
+  const bestLimitRatioStored = JSON.parse(localStorage.getItem("bestLimitRatio") || "{}");
+  if (!bestLimitRatioStored.swapLimit || BigNumber(b.amount).isGreaterThan(BigNumber(swapLimit))) {
+    let bestLimitRatio;
+    if (!bestLimitRatioStored.swapLimit || Math.abs(swapLimit - bestLimitRatioStored.swapLimit) / swapLimit > 0.1) {
+      const step = 1 / 7;
+      const max = 1;
+      bestLimitRatio = 0;
+      let bestOutcome: BigNumber | null = null;
+      for (let i = 0; i < max / step; i++) {
+        const currentRatio = i * step;
+        const swapChoice = swapLimit * currentRatio;
+        const stakeAmount = BigNumber(BigNumber(swapLimit).toFixed(6)).minus(swapChoice);
+        const expectedResult = BigNumber(stakeAmount)
+          .dividedBy(+price / 10 ** 6)
+          .multipliedBy(1 - 0.2 / 100)
+          .plus(swapFn(BigNumber(swapChoice)));
+        const outcome = BigNumber(swapLimit).dividedBy(expectedResult);
+        const diff = BigNumber(outcome).minus(price / 10 ** 6);
+        console.log(diff.toString());
+        if (outcome.isGreaterThan(0) && !diff.isNaN() && (!bestOutcome || diff.isLessThan(bestOutcome))) {
+          bestLimitRatio = currentRatio;
+          bestOutcome = diff;
+        } else if (!diff.isNaN()) {
+          break;
+        }
+        bestLimitRatioStored.ratio = bestLimitRatio;
+        bestLimitRatioStored.slippage = bestOutcome?.toNumber() || 0;
       }
+
+      localStorage.setItem(
+        "bestLimitRatio",
+        JSON.stringify({
+          swapLimit,
+          ratio: bestLimitRatioStored.ratio,
+          slippage: bestLimitRatioStored.slippage,
+        })
+      );
     }
-    const swapChoice = swapLimit * bestLimitRatio;
+    const swapChoice = BigNumber(Math.min(+b.amount, swapLimit)).times(bestLimitRatioStored.ratio);
     const stakeChoice = BigNumber(BigNumber(b.amount).toFixed(6)).minus(swapChoice);
     ops = [
       {
         tx: "swap",
-        amount: BigNumber(swapChoice).toFixed(6),
-        slippage: bestOutcome,
-        minReceive: BigNumber(swapChoice)
+        amount: swapChoice.toFixed(6),
+        minReceive: swapChoice
           .dividedBy(+price / 10 ** 6)
           .multipliedBy(1 - 0.2 / 100),
       },
       { tx: "stake", amount: stakeChoice.toFixed(6) },
     ];
-    ratio = BigNumber(swapChoice).dividedBy(b.amount).toNumber();
+    ratio = swapChoice.dividedBy(b.amount).toNumber();
     stkdSCRTExpected = swapFn(swapChoice)
       .plus(stakeChoice.dividedBy(+price / 10 ** 6).multipliedBy(1 - 0.2 / 100))
       .toFixed(6);
-  } else if (swapLimit > 0) {
+  } else if (
+    swapLimit > 0 &&
+    (stkdSCRTExpected = swapFn(BigNumber(b.amount)).toFixed(6)) &&
+    BigNumber(stkdSCRTExpected).times(bestLimitRatioStored.slippage).isGreaterThan(stkdSCRTGasFee)
+  ) {
     ratio = 1;
-    stkdSCRTExpected = BigNumber(b.amount).toFixed(6);
-    ops = [{ tx: "swap", amount: BigNumber(b.amount).toFixed(6) }];
+    ops = [
+      {
+        tx: "swap",
+        minReceive: BigNumber(b.amount)
+          .dividedBy(+price / 10 ** 6)
+          .multipliedBy(1 - 0.2 / 100),
+        amount: BigNumber(b.amount).toFixed(6),
+      },
+    ];
   } else {
     ratio = 0;
     stkdSCRTExpected = BigNumber(b.amount)
@@ -941,28 +973,26 @@ const routes = {
   uscrt: [id, stake],
 } as Record<string, any>;
 
-function createTasks(amounts: any, price: any, swapLimit: any): { ibc: null; unwrap: null; base: null; stake: null } | undefined {
-  const reduce = amounts?.reduce(
-    (agg: any, amount: any) => {
-      +amount.amount > 0 &&
-        routes[amount.denom].forEach((fn: any) => {
-          const nextStep = fn(amount, price, swapLimit.scrtSwapLimit);
-          if (nextStep.txName) {
-            if (agg[nextStep.txName]) {
-              agg[nextStep.txName] = {
-                ...nextStep,
-                amount: BigNumber(nextStep.amount).plus(BigNumber(agg[nextStep.txName].amount)).toString(),
-                wait: {
-                  ...nextStep.wait,
-                  amount: BigNumber(nextStep.wait.amount).plus(BigNumber(agg[nextStep.txName].wait.amount)).toString(),
-                },
-              };
-            } else {
-              agg[nextStep.txName] = nextStep;
-            }
+function createTasks(balanceAmounts: any, price: any, swapLimit: any): { ibc: null; unwrap: null; base: null; stake: null } | undefined {
+  const reduce = balanceAmounts?.reduce(
+    (agg: any, balance: any) => {
+      +balance.amount > 0 &&
+        routes[balance.denom].forEach((fn: any) => {
+          if (agg[fn.name]) {
+            const nextStep = fn(
+              {
+                ...balance,
+                amount: BigNumber(balance.amount).plus(agg[fn.name].amount).toString(),
+              },
+              price,
+              swapLimit.scrtSwapLimit
+            );
+            agg[fn.name] = nextStep;
+          } else {
+            agg[fn.name] = fn(balance, price, swapLimit.scrtSwapLimit);
           }
-          if (amount.denom === "uscrt") {
-            agg.base = id(amount);
+          if (balance.denom === "uscrt") {
+            agg.base = id(balance);
           }
         });
       return agg;
@@ -975,27 +1005,38 @@ function createTasks(amounts: any, price: any, swapLimit: any): { ibc: null; unw
     }
   ) as { ibc: any; unwrap: any; stake: any; base: any };
   const amnts = {
-    uscrt: BigNumber(reduce.ibc?.amount).plus(reduce.base?.amount),
-    sSCRT: reduce.unwrap?.amount,
+    uscrt: BigNumber(reduce.ibc?.amount || 0).plus(reduce.base?.amount || 0),
+    sSCRT: BigNumber(reduce.unwrap?.amount || 0),
   };
   const swapOp = reduce.stake?.ops?.find((d: any) => d.tx === "swap");
   const stakeOp = reduce.stake?.ops?.find((d: any) => d.tx === "stake");
+  let toWrapBeforeSwapAmount;
+  let toUnwrapBeforeStakeAmount;
   if (swapOp) {
-    if (amnts.sSCRT < swapOp.amount) {
-      // we need to wrap some
-      reduce.stake.ops.unshift({
-        tx: "wrap",
-        amount: BigNumber(swapOp.amount).minus(amnts.sSCRT).toString(),
-      });
+    if (amnts.sSCRT.isLessThan(swapOp.amount)) {
+      // we need to wrap remaining
+      toWrapBeforeSwapAmount = BigNumber(swapOp.amount).minus(amnts.sSCRT);
     }
-    reduce.unwrap.amount -= swapOp.amount;
-    if (reduce.unwrap.amount > 0) {
-      reduce.stake.ops.unshift({
-        tx: "unwrap",
-        amount: reduce.unwrap.amount,
-      });
-    }
-    delete reduce.unwrap;
   }
+  if (stakeOp) {
+    if (amnts.uscrt.isLessThan(stakeOp.amount)) {
+      toUnwrapBeforeStakeAmount = BigNumber(stakeOp.amount).minus(amnts.uscrt);
+    }
+  }
+
+  if (toWrapBeforeSwapAmount && toWrapBeforeSwapAmount.isGreaterThan(0)) {
+    reduce.stake.ops.unshift({
+      tx: "wrap",
+      amount: toWrapBeforeSwapAmount.toString(),
+    });
+  }
+  if (toUnwrapBeforeStakeAmount && toUnwrapBeforeStakeAmount.isGreaterThan(0)) {
+    reduce.stake.ops.unshift({
+      tx: "unwrap",
+      amount: toUnwrapBeforeStakeAmount.toString(),
+    });
+  }
+  delete reduce.unwrap;
+  delete reduce.base;
   return reduce;
 }

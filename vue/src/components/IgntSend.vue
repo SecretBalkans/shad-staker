@@ -14,7 +14,7 @@
       </div>
       <div class="text-xs italic mt-2 max-w-fit">
         <div v-if="isTxError" class="text-red-500">
-          {{ fsm.context.jobStates?.stake?.error }}
+          {{ fsm.context.jobStates?.stake?.error || fsm.context.jobStates?.ibc?.error }}
           <div title="Click tx link in route for more details!" class="mt-1">
             <ignt-warning-icon></ignt-warning-icon>
           </div>

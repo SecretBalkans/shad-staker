@@ -55,11 +55,14 @@ const props = defineProps<{
   prefix?: string;
   width?: string;
 }>();
+
+const text = computed(() => prettyNumber(+(props.text || 0), 6, 6, false))
+
 const formatted = computed(() => {
   if (props.text === undefined) {
     return "";
   }
-  return props.prettyNumber ? prettyNumber(+props.text, +props.prettyNumber!) : "" + props.text;
+  return props.prettyNumber ? prettyNumber(+props.text, +props.prettyNumber!) : "" + prettyNumber(+props.text, 6, 6, false);
 });
 // const select = ref(selectFn(props.text));
 

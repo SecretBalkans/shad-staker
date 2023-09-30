@@ -26,7 +26,7 @@ export function addCommas(nStr: string | number) {
   return x1 + x2;
 }
 
-export function prettyNumber(number?: number, fractionDigits = 2, largeNumbersFractionDigits = 2): string {
+export function prettyNumber(number?: number, fractionDigits = 2, largeNumbersFractionDigits = 2, recursive = true): string {
   if (number) {
     if (Number.isNaN(+number)) {
       return "" + number;
@@ -35,7 +35,9 @@ export function prettyNumber(number?: number, fractionDigits = 2, largeNumbersFr
       number = +number;
       return addCommas(
         number > 10000
-          ? `${prettyNumber(number / 1000, fractionDigits, largeNumbersFractionDigits)}K`
+          ? recursive
+            ? `${prettyNumber(number / 1000, fractionDigits, largeNumbersFractionDigits, true)}K`
+            : number
           : number > 1000
           ? number.toFixed(largeNumbersFractionDigits)
           : number.toFixed(fractionDigits)
