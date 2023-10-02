@@ -36,7 +36,7 @@ export function prettyNumber(number?: number, fractionDigits = 2, largeNumbersFr
       return addCommas(
         number > 10000
           ? recursive
-            ? `${prettyNumber(number / 1000, fractionDigits, largeNumbersFractionDigits, true)}K`
+            ? `${prettyNumber(number / 1000, fractionDigits, largeNumbersFractionDigits, true)} K`
             : number
           : number > 1000
           ? number.toFixed(largeNumbersFractionDigits)
