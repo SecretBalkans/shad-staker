@@ -38,20 +38,11 @@
     <div class="w-fit pt-5" v-if="state.amounts[0] || state.currentUIState === UI_STATE.TX_SIGNING || isTxSuccess || isTxError">
       <div class="text-xs pb-1 text-gray-600" v-if="fsm.context.tasks.stake?.wait?.amount">
         Route for
-        {{
-          `${
-            [fsm.context.tasks.unwrap, fsm.context.tasks.base, fsm.context.tasks.ibc].filter((d) => !!d).length > 1
-              ? `a
-        total of `
-              : ``
-          }`
-        }}{{ fsm.context.tasks.stake?.wait?.amount }} stkd-SCRT
+        {{ prettyNumber(fsm.context.tasks.stake?.wait?.amount) }} stkd-SCRT
       </div>
-      <StakeRoute
-        class="pl-5 pr-20"
-        :fsm="fsm"
-        :colored="state.currentUIState !== UI_STATE.TX_SIGNING && fsm.value !== 'idle'"
-      ></StakeRoute>
+      <div class="pl-5 pr-20">
+        <StakeRoute :fsm="fsm" :colored="state.currentUIState !== UI_STATE.TX_SIGNING && fsm.value !== 'idle'"></StakeRoute>
+      </div>
     </div>
     <div style="width: 100%; height: 24px" />
     <div>
@@ -84,7 +75,7 @@
       <div class="flex align-center items-center justify-center">
         <IgntButton
           style="width: 110px"
-          :disabled="false && !ableToTx"
+          :disabled="!ableToTx"
           @click="sendTx"
           :busy="isTxOngoing"
           v-if="state.currentUIState === UI_STATE.STAKE"
@@ -114,6 +105,7 @@ import { useMachine } from "@xstate/vue";
 import StakeRoute from "@/components/StakeRoute.vue";
 import { PERSISTENCE_HISTORY_KEY, PERSISTENCE_KEY } from "@/utils/const";
 import { useSwapLimit } from "@/def-composables/state/useSwapLimit";
+import { prettyNumber } from "@/utils/prettyNumber";
 
 interface State {
   amounts: Array<BalanceAmount>;

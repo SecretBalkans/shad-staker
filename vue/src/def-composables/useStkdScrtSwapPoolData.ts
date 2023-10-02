@@ -81,7 +81,7 @@ function useStkdScrtSwapPoolDataInstance(secretJsClient: any) {
         })[0]?.quoteOutputAmount
       ).dividedBy(10 ** 6);
     },
-    swapStkdSCRT: (amount: number) => {
+    swapStkdSCRT: (amount: number | BigNumber) => {
       if (!parsed.value) {
         return null;
       }

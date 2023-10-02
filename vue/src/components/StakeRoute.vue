@@ -1,7 +1,7 @@
 <template>
   <div
     :hidden="!tasks.stake"
-    class="pt-2.5 px-2 pb-1.5"
+    class="pt-2.5 px-2 pb-1.5 flex-row flex"
     :style="
       colored
         ? {
@@ -16,7 +16,7 @@
         : {}
     "
   >
-    <span v-if="tasks.ibc" class="flex-row">
+    <span v-if="tasks.ibc" class="inline-flex">
       <RouteAsset :amount="tasks.ibc" :col-id="0" @update="updateMaxLengths" :max-len="maxLengths[0]"></RouteAsset>
       <TxFsmOp
         :fsm="props.fsm"
@@ -35,74 +35,6 @@
       :job-state-path="`stake`"
     ></TxFsmOp>
     <RouteAsset v-if="tasks.stake" :amount="tasks.stake?.wait" :col-id="0" @update="updateMaxLengths" :max-len="maxLengths[0]"></RouteAsset>
-    <!--    <div v-if="tasks.unwrap" class="flex-row">
-      <RouteAsset :amount="tasks.unwrap" :col-id="0" @update="updateMaxLengths" :max-len="maxLengths[0]"></RouteAsset>
-      <TxFsmOp
-        :fsm="props.fsm"
-        :tx-state-path="`unwrap`"
-        :stopped="stopped"
-        :op="`Unwrap private sSCRT (${tasks.unwrap.amount} sSCRT)`"
-      ></TxFsmOp>
-      <RouteAsset
-        v-if="tasks.base"
-        :amount="tasks.unwrap.wait"
-        :col-id="0"
-        @update="updateMaxLengths"
-        :max-len="maxLengths[0]"
-      ></RouteAsset>
-      <span v-if="!tasks.base">
-        <RouteAsset :amount="tasks.stake" :col-id="0" @update="updateMaxLengths" :max-len="maxLengths[0]"></RouteAsset>
-        <TxFsmOp
-          :fsm="props.fsm"
-          :tx-state-path="`stake.staking`"
-          :job-state-path="`stake`"
-          :stopped="stopped"
-          :op="`${stakeOpLabel} after unwrap (${tasks.unwrap.amount} sSCRT)${
-            tasks.ibc ? ` and IBC from Osmosis (${tasks.ibc.amount} SCRT)` : ''
-          }`"
-        ></TxFsmOp>
-        <RouteAsset :amount="tasks.stake.wait" :col-id="0" @update="updateMaxLengths" :max-len="maxLengths[0]"></RouteAsset>
-      </span>
-    </div>
-    <div v-if="tasks.base" class="flex-row">
-      <RouteAsset
-        :amount="tasks.base"
-        v-if="tasks.base && (tasks.unwrap || tasks.ibc)"
-        :col-id="0"
-        @update="updateMaxLengths"
-        :max-len="maxLengths[0]"
-      ></RouteAsset>
-      <TxFsmOp
-        type="wait"
-        :stopped="stopped"
-        :pulse="props.fsm?.matches('working.stake.waitAll')"
-        :green="props.fsm?.matches('working.stake.staking') || jobStates.stake.type === 'finished' || !!jobStates.stake.error"
-        :error="!!jobStates.ibc?.error || !!jobStates.unwrap?.error"
-        :op="`Wait ${[
-          tasks.unwrap && `unwrap private sSCRT (${tasks.unwrap.amount} sSCRT)`,
-          tasks.ibc && `IBC from Osmosis (${tasks.ibc.amount} SCRT)`,
-        ]
-          .filter((d) => !!d)
-          .join(' and ')}`"
-        v-if="tasks.unwrap || tasks.ibc"
-      />
-      <RouteAsset :amount="tasks.stake" :col-id="0" @update="updateMaxLengths" :max-len="maxLengths[0]"></RouteAsset>
-      <TxFsmOp
-        :fsm="props.fsm"
-        :tx-state-path="`stake.staking`"
-        :job-state-path="`stake`"
-        :stopped="stopped"
-        :op="`${stakeOpLabel} SCRT (${[
-          tasks.base?.amount && `${tasks.base?.amount} on SCRT`,
-          tasks.unwrap?.amount && `${tasks.unwrap?.amount} unwrapped sSCRT`,
-          tasks.ibc?.amount && `${tasks.ibc?.amount} SCRT from Osmosis`,
-        ]
-          .filter((d) => !!d)
-          .join(' + ')})`"
-      ></TxFsmOp>
-      <RouteAsset :amount="tasks.stake.wait" :col-id="0" @update="updateMaxLengths" :max-len="maxLengths[0]"></RouteAsset>
-    </div>-->
-    {{ tasks?.stake?.ops }} {{ tasks?.stake?.ratio * 100 }}
   </div>
 </template>
 
@@ -146,7 +78,7 @@ const stakeOpLabel = computed(() => {
 
   return (
     (tasks.value.stake?.ratio > 0 && tasks.value.stake?.ratio < 1
-      ? [`swap ${prettyNumber(swapAmount, 6, 6, false)}`, `stake ${prettyNumber(stakeAmount, 6, 6, false)}`].join(
+      ? [`Swap ${prettyNumber(swapAmount, 6, 6, false)} sSCRT`, `Stake ${prettyNumber(stakeAmount, 6, 6, false)}`].join(
           " and "
         )
       : tasks.value.stake?.ratio === 1

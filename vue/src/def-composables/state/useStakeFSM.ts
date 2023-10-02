@@ -329,6 +329,7 @@ async function decodeTxResponse(txResp: TxResponsePb, enigmaUtils: any): Promise
     ibcResponses: [],
   };
 }
+
 async function waitForIbcResponse(
   txType: any,
   packetSequence: any,
@@ -727,7 +728,11 @@ export const useStakeFSM = () => {
                 assign((context, event: any) => ({
                   ...context,
                   tasks: createTasks(event.amounts, event.price, event.swapLimit),
-                  jobStates: { ibc: { type: "", error: null }, unwrap: { type: "", error: null }, stake: { type: "", error: null } },
+                  jobStates: {
+                    ibc: { type: "", error: null },
+                    unwrap: { type: "", error: null },
+                    stake: { type: "", error: null },
+                  },
                 })),
               ],
             },
@@ -839,53 +844,14 @@ const stake = (b: BalanceAmount, price: any, swapLimit: number) => {
     .multipliedBy(1 - 0.2 / 100);
   const swapFn = useStkdScrtSwapPoolData().swapSCRT;
   let ratio;
-  const bestLimitRatioStored = JSON.parse(localStorage.getItem("bestLimitRatio") || "{}");
-  if (!bestLimitRatioStored.swapLimit || BigNumber(b.amount).isGreaterThan(BigNumber(swapLimit))) {
-    let bestLimitRatio;
-    if (!bestLimitRatioStored.swapLimit || Math.abs(swapLimit - bestLimitRatioStored.swapLimit) / swapLimit > 0.1) {
-      const step = 1 / 7;
-      const max = 1;
-      bestLimitRatio = 0;
-      let bestOutcome: BigNumber | null = null;
-      for (let i = 0; i < max / step; i++) {
-        const currentRatio = i * step;
-        const swapChoice = swapLimit * currentRatio;
-        const stakeAmount = BigNumber(BigNumber(swapLimit).toFixed(6)).minus(swapChoice);
-        const expectedResult = BigNumber(stakeAmount)
-          .dividedBy(+price / 10 ** 6)
-          .multipliedBy(1 - 0.2 / 100)
-          .plus(swapFn(BigNumber(swapChoice)));
-        const outcome = BigNumber(swapLimit).dividedBy(expectedResult);
-        const diff = BigNumber(outcome).minus(price / 10 ** 6);
-        console.log(diff.toString());
-        if (outcome.isGreaterThan(0) && !diff.isNaN() && (!bestOutcome || diff.isLessThan(bestOutcome))) {
-          bestLimitRatio = currentRatio;
-          bestOutcome = diff;
-        } else if (!diff.isNaN()) {
-          break;
-        }
-        bestLimitRatioStored.ratio = bestLimitRatio;
-        bestLimitRatioStored.slippage = bestOutcome?.toNumber() || 0;
-      }
-
-      localStorage.setItem(
-        "bestLimitRatio",
-        JSON.stringify({
-          swapLimit,
-          ratio: bestLimitRatioStored.ratio,
-          slippage: bestLimitRatioStored.slippage,
-        })
-      );
-    }
-    const swapChoice = BigNumber(Math.min(+b.amount, swapLimit)).times(bestLimitRatioStored.ratio);
+  if (BigNumber(b.amount).isGreaterThan(swapLimit)) {
+    const swapChoice = BigNumber(swapLimit);
     const stakeChoice = BigNumber(BigNumber(b.amount).toFixed(6)).minus(swapChoice);
     ops = [
       {
         tx: "swap",
         amount: swapChoice.toFixed(6),
-        minReceive: swapChoice
-          .dividedBy(+price / 10 ** 6)
-          .multipliedBy(1 - 0.2 / 100),
+        minReceive: swapChoice.dividedBy(+price / 10 ** 6).multipliedBy(1 - 0.2 / 100),
       },
       { tx: "stake", amount: stakeChoice.toFixed(6) },
     ];
@@ -896,7 +862,13 @@ const stake = (b: BalanceAmount, price: any, swapLimit: number) => {
   } else if (
     swapLimit > 0 &&
     (stkdSCRTExpected = swapFn(BigNumber(b.amount)).toFixed(6)) &&
-    BigNumber(stkdSCRTExpected).times(bestLimitRatioStored.slippage).isGreaterThan(stkdSCRTGasFee)
+    BigNumber(stkdSCRTExpected)
+      .minus(
+        BigNumber(b.amount)
+          .dividedBy(+price / 10 ** 6)
+          .multipliedBy(1 - 0.2 / 100)
+      )
+      .isGreaterThan(stkdSCRTGasFee)
   ) {
     ratio = 1;
     ops = [
@@ -905,14 +877,14 @@ const stake = (b: BalanceAmount, price: any, swapLimit: number) => {
         minReceive: BigNumber(b.amount)
           .dividedBy(+price / 10 ** 6)
           .multipliedBy(1 - 0.2 / 100),
-        amount: BigNumber(b.amount).toFixed(6),
+        amount: b.amount,
       },
     ];
   } else {
     ratio = 0;
     stkdSCRTExpected = BigNumber(b.amount)
       .dividedBy(+price / 10 ** 6)
-      .multipliedBy(1 - 0.2 / 100);
+      .multipliedBy(1 - 0.2 / 100).toFixed(6);
     ops = [{ tx: "stake", amount: b.amount }];
   }
   return {

@@ -41,7 +41,10 @@ export function prettyNumber(number?: number, fractionDigits = 2, largeNumbersFr
           : number > 1000
           ? number.toFixed(largeNumbersFractionDigits)
           : number.toFixed(fractionDigits)
-      );
+      )
+        .replace(`.00`, `.__`)
+        .replace(/0*$/g, "")
+        .replace(`.__`, ".00");
     } else {
       return "" + number;
     }
