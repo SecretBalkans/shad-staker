@@ -9,7 +9,7 @@
       :is-secret="!!amount.secretAddress"
       modifier="avatar"
     />
-    <selectable-label class="inline-flex" :text="'' + Math.abs(+amount?.amount.toString())" pretty-number="2" :width="`${maxLen}px`" />
+    <selectable-label class="inline-flex" :text="'' + Math.abs(+amount?.amount.toString())" pretty-number="6" :width="`${maxLen}px`" />
   </span>
 </template>
 
