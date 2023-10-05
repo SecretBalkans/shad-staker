@@ -430,7 +430,9 @@ async function stakeFn(task: any): Promise<string> {
   if (swapOp) {
     const rawMsg = JSON.stringify({
       swap_tokens_for_exact: {
-        expected_return: BigNumber(swapOp.minReceive).toFixed(6),
+        expected_return: BigNumber(swapOp.minReceive)
+          .times(10 ** 6)
+          .toFixed(0),
         path: [
           {
             addr: "secret1y6w45fwg9ln9pxd6qys8ltjlntu9xa4f2de7sp",
@@ -884,7 +886,8 @@ const stake = (b: BalanceAmount, price: any, swapLimit: number) => {
     ratio = 0;
     stkdSCRTExpected = BigNumber(b.amount)
       .dividedBy(+price / 10 ** 6)
-      .multipliedBy(1 - 0.2 / 100).toFixed(6);
+      .multipliedBy(1 - 0.2 / 100)
+      .toFixed(6);
     ops = [{ tx: "stake", amount: b.amount }];
   }
   return {

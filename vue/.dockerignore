@@ -4,7 +4,6 @@ node_modules/
 # Exclude development-specific files and directories
 .git/
 .gitignore
-node_modules/
 npm-debug.log
 yarn-error.log
 *.log
@@ -13,6 +12,7 @@ yarn-error.log
 .vscode/
 .idea/
 .DS_Store
+Dockerfile
 
 # Exclude build output (if applicable)
 dist/
@@ -22,6 +22,7 @@ dist/
 .env.local
 .env.production
 .env.staging
+.dockerignore
 
 # Exclude any other files or directories not needed in the Docker image
 Here's an explanation of what each rule does:
