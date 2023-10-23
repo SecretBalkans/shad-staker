@@ -24,6 +24,8 @@ Steps of route calculation:
 - building execution path
 - executing atomic operations (swap, ibc, unwrap, wait)
 
+![image](https://github.com/SecretBalkans/shad-staker/assets/57235266/5652a46a-aede-417d-85bc-e7841d94fe4a)
+
 ## Usage
 Dapp is hosted on akash [ukdkh03suhevn1m3f8nmjanmpk.ingress.moonbys.cloud](http://ukdkh03suhevn1m3f8nmjanmpk.ingress.moonbys.cloud/) <br/>
 
