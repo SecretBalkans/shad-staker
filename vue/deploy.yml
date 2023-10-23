@@ -1,34 +1,31 @@
 ---
-version: "2.0"
-
+version: '2.0'
 services:
-  web:
-    image: hadzija7/shad-staker:3
+  shad-staker-nginx:
+    image: 'antonymousn/shad-staker:nginx-test-1'
     expose:
-      - port: 4173
+      - port: 80
         as: 80
         to:
           - global: true
-
 profiles:
   compute:
-    web:
+    shad-staker-nginx:
       resources:
         cpu:
           units: 0.5
         memory:
           size: 1Gi
         storage:
-          size: 1.5Gi
+          - size: 1Gi
   placement:
     dcloud:
       pricing:
-        web:
+        shad-staker-nginx:
           denom: uakt
           amount: 1000
-
 deployment:
-  web:
+  shad-staker-nginx:
     dcloud:
-      profile: web
+      profile: shad-staker-nginx
       count: 1
