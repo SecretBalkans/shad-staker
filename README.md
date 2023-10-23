@@ -25,9 +25,9 @@ Steps of route calculation:
 - executing atomic operations (swap, ibc, unwrap, wait)
 
 ## Usage
-Dapp is hosted [here](http://ma4tshskutaaba50l865j7s4p8.ingress.d3akash.cloud/) <br/>
+Dapp is hosted on akash [ukdkh03suhevn1m3f8nmjanmpk.ingress.moonbys.cloud](http://ukdkh03suhevn1m3f8nmjanmpk.ingress.moonbys.cloud/) <br/>
 
-Docker image is [here](https://hub.docker.com/layers/hadzija7/shad-staker/3/images/sha256-214a476e24c36f19646567b435f12794ec922c8cd89465d9624b3dd7f02459dd?context=repo) <br/>
+A demo docker image is pushed on dockerhub `docker pull antonymousn/shad-staker:nginx-test-1` <br/>
 
 Akash SDL file is [here](https://github.com/SecretBalkans/akash-frontend/blob/main/vue/deploy.yml) <br/>
 
