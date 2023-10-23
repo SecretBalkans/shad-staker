@@ -72,6 +72,13 @@ export class SecretClient {
     );
   }
 
+  async getCodeHash (contractAddress: string): Promise<string | undefined> {
+    const codeHash = await this.client.query.compute.codeHashByContractAddress({
+      contract_address: contractAddress,
+    });
+    return codeHash?.code_hash;
+  }
+
   /**
    * Sign a contract call returning a message to broadcast.
    * @param contractAddress
@@ -79,26 +86,33 @@ export class SecretClient {
    * @param gasPrice
    * @param gasLimit
    * @param funds
+   * @param additionalMsgs MsgExecuteContract[]
    */
   async signContractCall(
     contractAddress: string,
     msg: any,
     gasPrice = 0.015,
     gasLimit = 1700000,
-    funds = null as Nullable<Coin[]>
+    funds = null as Nullable<Coin[]>,
+    additionalMsgs: MsgExecuteContract<any>[] = []
   ): Promise<string> {
     const codeHash = await this.client.query.compute.codeHashByContractAddress({
       contract_address: contractAddress,
     });
     return this.client.tx.signTx(
       [
-        new MsgExecuteContract({
-          contract_address: contractAddress,
-          code_hash: codeHash.code_hash,
-          sender: this.client.address,
-          msg,
-          sent_funds: funds || [],
-        }),
+        ...additionalMsgs,
+        ...(msg
+          ? [
+              new MsgExecuteContract({
+                contract_address: contractAddress,
+                code_hash: codeHash.code_hash,
+                sender: this.client.address,
+                msg,
+                sent_funds: funds || [],
+              }),
+            ]
+          : []),
       ],
       {
         gasLimit,
@@ -182,6 +196,17 @@ export class SecretClient {
     });
     const result: any = await this.querySecretContract(stkdSCRTContractAddress, msgFees(), codeHash.code_hash ? codeHash.code_hash : "0");
     return result;
+  }
+
+  async getStkdScrtPoolData() {
+    const codeHash = await this.client.query.compute.codeHashByContractAddress({
+      contract_address: "secret1y6w45fwg9ln9pxd6qys8ltjlntu9xa4f2de7sp",
+    });
+    return await this.querySecretContract(
+      "secret1y6w45fwg9ln9pxd6qys8ltjlntu9xa4f2de7sp",
+      { get_pair_info: {} },
+      codeHash.code_hash ? codeHash.code_hash : "0"
+    );
   }
 
   async getUnbonding() {

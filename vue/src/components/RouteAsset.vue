@@ -9,7 +9,7 @@
       :is-secret="!!amount.secretAddress"
       modifier="avatar"
     />
-    <selectable-label class="inline-flex" :text="'' + Math.abs(+amount?.amount)" :width="`${maxLen}px`" />
+    <selectable-label class="inline-flex" :text="'' + Math.abs(+amount?.amount.toString())" pretty-number="6" :width="`${maxLen}px`" />
   </span>
 </template>
 
@@ -19,6 +19,7 @@ import { onBeforeUnmount, onMounted, PropType, watch } from "vue";
 import IgntDenom from "@/components/IgntDenom.vue";
 import SelectableLabel from "@/components/pretty/SelectableLabel.vue";
 import {uuidv4} from "@/utils/uuid";
+import {prettyNumber} from "@/utils/prettyNumber";
 
 const props = defineProps({
   amount: {

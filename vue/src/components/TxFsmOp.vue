@@ -1,5 +1,5 @@
 <template>
-  <span class="relative inline-block" style="top: -0.5rem" :title="title">
+  <span class="relative inline-block" style="top: 0.25rem" :title="title">
     <span
       :class="{
         'animate-pulse': !stopped && pulse,
@@ -132,7 +132,7 @@ const title = computed(() => {
                     : "Signing"
                 }`
           }`
-    } ${props.op}`;
+    } of ${props.op}`;
   }
   if (green.value) {
     return `Finished ${props.op}`;

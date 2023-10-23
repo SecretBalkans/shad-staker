@@ -19,6 +19,8 @@ import { TxMsgData } from "secretjs/src/protobuf/cosmos/base/abci/v1beta1/abci";
 import { MsgExecuteContractResponse, MsgInstantiateContractResponse } from "secretjs/src/protobuf/secret/compute/v1beta1/msg";
 import type { AnyJson, ArrayLog, JsonLog } from "secretjs/src/secret_network_client";
 import type { V1Beta1TxResponse } from "example-client-ts/cosmos.tx.v1beta1/rest";
+import { useStkdScrtSwapPoolData } from "@/def-composables/useStkdScrtSwapPoolData";
+import { MsgExecuteContract } from "secretjs";
 
 function getTimeoutTimestamp() {
   const timeoutInMinutes = 15;
@@ -30,6 +32,7 @@ function getTimeoutTimestamp() {
 
 const IBCTxGasStakeGas = "" + 350_000;
 const secretGasPrice = 0.1;
+const SWAP_GAS = 2_275_000;
 
 async function broadcast(message: string | Uint8Array | any, task: any): Promise<string> {
   const walletStore = useWalletStore();
@@ -326,6 +329,7 @@ async function decodeTxResponse(txResp: TxResponsePb, enigmaUtils: any): Promise
     ibcResponses: [],
   };
 }
+
 async function waitForIbcResponse(
   txType: any,
   packetSequence: any,
@@ -415,21 +419,107 @@ async function unwrapFn(task: any): Promise<string> {
 
 async function stakeFn(task: any): Promise<string> {
   const walletStore = useWalletStore();
+  const stakeOp = task.ops.find((d: any) => d.tx === "stake");
+  const unwrapOp = task.ops.find((d: any) => d.tx === "unwrap");
+  const swapOp = task.ops.find((d: any) => d.tx === "swap");
+  const wrapOp = task.ops.find((d: any) => d.tx === "wrap");
+  const swapMsgs: any[] = [];
+  const unwrapMsgs: any[] = [];
+  let gas = 0;
+  const sSCRTCodeHash = await walletStore.secretJsClient!.getCodeHash(sSCRTContractAddress);
+  if (swapOp) {
+    const rawMsg = JSON.stringify({
+      swap_tokens_for_exact: {
+        expected_return: BigNumber(swapOp.minReceive)
+          .times(10 ** 6)
+          .toFixed(0),
+        path: [
+          {
+            addr: "secret1y6w45fwg9ln9pxd6qys8ltjlntu9xa4f2de7sp",
+            code_hash: "e88165353d5d7e7847f2c84134c3f7871b2eee684ffac9fcf8d99a4da39dc2f2",
+          },
+        ],
+      },
+    });
+    const swapAmountString = BigNumber(swapOp.amount)
+      .multipliedBy(10 ** 6)
+      .toFixed(0);
+    const msg = {
+      send: {
+        recipient: "secret1pjhdug87nxzv0esxasmeyfsucaj98pw4334wyc",
+        recipient_code_hash: "448e3f6d801e453e838b7a5fbaa4dd93b84d0f1011245f0d5745366dadaf3e85",
+        amount: swapAmountString,
+        msg: btoa(rawMsg),
+        // TODO: padding calculation
+        padding: "u3a9nScQ",
+      },
+    };
+    if (wrapOp) {
+      swapMsgs.push(
+        new MsgExecuteContract({
+          contract_address: sSCRTContractAddress,
+          sender: walletStore.secretAddress!,
+          code_hash: sSCRTCodeHash,
+          msg: {
+            deposit: {},
+          },
+          sent_funds: [
+            {
+              amount: BigNumber(wrapOp.amount)
+                .times(10 ** 6)
+                .toFixed(0),
+              denom: "uscrt",
+            },
+          ],
+        })
+      );
+      gas += 60_000;
+    }
+    gas += SWAP_GAS;
+    swapMsgs.push(
+      new MsgExecuteContract({
+        contract_address: sSCRTContractAddress,
+        code_hash: sSCRTCodeHash!,
+        sender: walletStore.secretAddress!,
+        msg,
+      })
+    );
+  }
+  if (unwrapOp) {
+    gas += 60_000;
+    unwrapMsgs.push(
+      new MsgExecuteContract({
+        contract_address: sSCRTContractAddress,
+        sender: walletStore.secretAddress!,
+        code_hash: sSCRTCodeHash,
+        msg: {
+          redeem: {
+            amount: BigNumber(unwrapOp.amount)
+              .multipliedBy(10 ** 6)
+              .toFixed(0),
+            denom: "uscrt",
+          },
+        },
+      })
+    );
+  }
+  gas += +IBCTxGasStakeGas;
   return await walletStore.secretJsClient!.signContractCall(
     stkdSCRTContractAddress,
-    {
+    stakeOp && {
       stake: {},
     },
     secretGasPrice,
-    +IBCTxGasStakeGas,
-    [
+    gas,
+    stakeOp && [
       {
-        amount: BigNumber(task.amount)
+        amount: BigNumber(stakeOp.amount)
           .multipliedBy(10 ** 6)
           .toFixed(0),
         denom: "uscrt",
       },
-    ]
+    ],
+    [...unwrapMsgs, ...swapMsgs]
   );
 }
 
@@ -639,8 +729,12 @@ export const useStakeFSM = () => {
               actions: [
                 assign((context, event: any) => ({
                   ...context,
-                  tasks: createTasks(event.amounts, event.price),
-                  jobStates: { ibc: { type: "", error: null }, unwrap: { type: "", error: null }, stake: { type: "", error: null } },
+                  tasks: createTasks(event.amounts, event.price, event.swapLimit),
+                  jobStates: {
+                    ibc: { type: "", error: null },
+                    unwrap: { type: "", error: null },
+                    stake: { type: "", error: null },
+                  },
                 })),
               ],
             },
@@ -741,20 +835,67 @@ export const useStakeFSM = () => {
 };
 
 const id = (i: BalanceAmount) => i;
-const stake = (b: BalanceAmount, price: any) => {
-  const stkdSCRTRawPrice =
-    "" +
-    +BigNumber(b.amount)
-      .dividedBy(+price / 10 ** 6)
+
+const stake = (b: BalanceAmount, price: any, swapLimit: number) => {
+  let ops;
+  let stkdSCRTExpected;
+  const stkdSCRTGasFee = BigNumber(SWAP_GAS)
+    .dividedBy(10 ** 6)
+    .times(secretGasPrice)
+    .dividedBy(+price / 10 ** 6)
+    .multipliedBy(1 - 0.2 / 100);
+  const swapFn = useStkdScrtSwapPoolData().swapSCRT;
+  let ratio;
+  if (BigNumber(b.amount).isGreaterThan(swapLimit)) {
+    const swapChoice = BigNumber(swapLimit);
+    const stakeChoice = BigNumber(BigNumber(b.amount).toFixed(6)).minus(swapChoice);
+    ops = [
+      {
+        tx: "swap",
+        amount: swapChoice.toFixed(6),
+        minReceive: swapChoice.dividedBy(+price / 10 ** 6).multipliedBy(1 - 0.2 / 100),
+      },
+      { tx: "stake", amount: stakeChoice.toFixed(6) },
+    ];
+    ratio = swapChoice.dividedBy(b.amount).toNumber();
+    stkdSCRTExpected = swapFn(swapChoice)
+      .plus(stakeChoice.dividedBy(+price / 10 ** 6).multipliedBy(1 - 0.2 / 100))
       .toFixed(6);
-  const stkdSCRTExpected = BigNumber(stkdSCRTRawPrice)
-    .multipliedBy(1 - 0.2 / 100 - 0.01 / 100 /* epsilon for more reliable balance wait tx */)
-    .minus(1 / 10 ** 6)
-    .toFixed(6);
+  } else if (
+    swapLimit > 0 &&
+    (stkdSCRTExpected = swapFn(BigNumber(b.amount)).toFixed(6)) &&
+    BigNumber(stkdSCRTExpected)
+      .minus(
+        BigNumber(b.amount)
+          .dividedBy(+price / 10 ** 6)
+          .multipliedBy(1 - 0.2 / 100)
+      )
+      .isGreaterThan(stkdSCRTGasFee)
+  ) {
+    ratio = 1;
+    ops = [
+      {
+        tx: "swap",
+        minReceive: BigNumber(b.amount)
+          .dividedBy(+price / 10 ** 6)
+          .multipliedBy(1 - 0.2 / 100),
+        amount: b.amount,
+      },
+    ];
+  } else {
+    ratio = 0;
+    stkdSCRTExpected = BigNumber(b.amount)
+      .dividedBy(+price / 10 ** 6)
+      .multipliedBy(1 - 0.2 / 100)
+      .toFixed(6);
+    ops = [{ tx: "stake", amount: b.amount }];
+  }
   return {
     denom: "uscrt",
     txName: "stake",
     amount: b.amount,
+    ops,
+    ratio,
     icon: "scrt.svg",
     stakable: true,
     chainId: envSecret.chainId,
@@ -807,28 +948,26 @@ const routes = {
   uscrt: [id, stake],
 } as Record<string, any>;
 
-function createTasks(amounts: any, price: any): { ibc: null; unwrap: null; base: null; stake: null } | undefined {
-  return amounts?.reduce(
-    (agg: any, amount: any) => {
-      +amount.amount > 0 &&
-        routes[amount.denom].forEach((fn: any) => {
-          const nextStep = fn(amount, price);
-          if (nextStep.txName) {
-            if (agg[nextStep.txName]) {
-              agg[nextStep.txName] = {
-                ...nextStep,
-                amount: BigNumber(nextStep.amount).plus(BigNumber(agg[nextStep.txName].amount)).toString(),
-                wait: {
-                  ...nextStep.wait,
-                  amount: BigNumber(nextStep.wait.amount).plus(BigNumber(agg[nextStep.txName].wait.amount)).toString(),
-                },
-              };
-            } else {
-              agg[nextStep.txName] = nextStep;
-            }
+function createTasks(balanceAmounts: any, price: any, swapLimit: any): { ibc: null; unwrap: null; base: null; stake: null } | undefined {
+  const reduce = balanceAmounts?.reduce(
+    (agg: any, balance: any) => {
+      +balance.amount > 0 &&
+        routes[balance.denom].forEach((fn: any) => {
+          if (agg[fn.name]) {
+            const nextStep = fn(
+              {
+                ...balance,
+                amount: BigNumber(balance.amount).plus(agg[fn.name].amount).toString(),
+              },
+              price,
+              swapLimit.scrtSwapLimit
+            );
+            agg[fn.name] = nextStep;
+          } else {
+            agg[fn.name] = fn(balance, price, swapLimit.scrtSwapLimit);
           }
-          if (amount.denom === "uscrt") {
-            agg.base = id(amount);
+          if (balance.denom === "uscrt") {
+            agg.base = id(balance);
           }
         });
       return agg;
@@ -840,4 +979,39 @@ function createTasks(amounts: any, price: any): { ibc: null; unwrap: null; base:
       stake: null,
     }
   ) as { ibc: any; unwrap: any; stake: any; base: any };
+  const amnts = {
+    uscrt: BigNumber(reduce.ibc?.amount || 0).plus(reduce.base?.amount || 0),
+    sSCRT: BigNumber(reduce.unwrap?.amount || 0),
+  };
+  const swapOp = reduce.stake?.ops?.find((d: any) => d.tx === "swap");
+  const stakeOp = reduce.stake?.ops?.find((d: any) => d.tx === "stake");
+  let toWrapBeforeSwapAmount;
+  let toUnwrapBeforeStakeAmount;
+  if (swapOp) {
+    if (amnts.sSCRT.isLessThan(swapOp.amount)) {
+      // we need to wrap remaining
+      toWrapBeforeSwapAmount = BigNumber(swapOp.amount).minus(amnts.sSCRT);
+    }
+  }
+  if (stakeOp) {
+    if (amnts.uscrt.isLessThan(stakeOp.amount)) {
+      toUnwrapBeforeStakeAmount = BigNumber(stakeOp.amount).minus(amnts.uscrt);
+    }
+  }
+
+  if (toWrapBeforeSwapAmount && toWrapBeforeSwapAmount.isGreaterThan(0)) {
+    reduce.stake.ops.unshift({
+      tx: "wrap",
+      amount: toWrapBeforeSwapAmount.toString(),
+    });
+  }
+  if (toUnwrapBeforeStakeAmount && toUnwrapBeforeStakeAmount.isGreaterThan(0)) {
+    reduce.stake.ops.unshift({
+      tx: "unwrap",
+      amount: toUnwrapBeforeStakeAmount.toString(),
+    });
+  }
+  delete reduce.unwrap;
+  delete reduce.base;
+  return reduce;
 }

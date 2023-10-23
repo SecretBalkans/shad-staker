@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 node:lts-alpine
+FROM --platform=linux/amd64 node:lts-alpine as build-stage
 
 # Set the working directory inside the container
 WORKDIR /app/vue
@@ -17,7 +17,9 @@ COPY . .
 # build app for production with minification
 RUN yarn run build
 
-EXPOSE 4173
-
-# Start your application
-CMD [ "yarn", "preview" ]
+# production stage
+FROM nginx:stable-alpine as production-stage
+COPY ./nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build-stage /app/vue/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
